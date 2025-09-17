@@ -1,0 +1,134 @@
+{
+  "Name": "KiroMiniOrthanc",
+  "StorageDirectory": "/var/lib/orthanc/storage",
+  "IndexDirectory": "/var/lib/orthanc/db",
+  "StorageCompression": false,
+  "MaximumStorageSize": 0,
+  "MaximumPatientCount": 0,
+  
+  "DicomServerEnabled": true,
+  "DicomAet": "KIRO-MINI",
+  "DicomCheckCalledAet": false,
+  "DicomPort": 4242,
+  "DefaultEncoding": "Latin1",
+  
+  "HttpServerEnabled": true,
+  "HttpPort": 8042,
+  "HttpDescribeErrors": true,
+  "HttpCompressionEnabled": true,
+  
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false,
+    "QidoCaseSensitive": false,
+    "Host": "0.0.0.0",
+    "Port": 8042
+  },
+  
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": false,
+  "SslEnabled": false,
+  
+  "StableAge": 60,
+  "StrictAetComparison": false,
+  
+  "StoreMD5ForAttachments": true,
+  
+  "LimitFindResults": 0,
+  "LimitFindInstances": 0,
+  
+  "LogExportedResources": true,
+  "KeepAlive": true,
+  "TcpNoDelay": true,
+  "HttpRequestTimeout": 30,
+  
+  "DicomScuTimeout": 10,
+  "DicomScuPreferredTransferSyntax": "1.2.840.10008.1.2.1",
+  
+  "UnknownSopClassAccepted": false,
+  
+  "DicomAlwaysAllowEcho": true,
+  "DicomAlwaysAllowFind": true,
+  "DicomAlwaysAllowMove": true,
+  "DicomAlwaysAllowGet": true,
+  "DicomAlwaysAllowStore": true,
+  
+  "DicomCheckModalityHost": false,
+  
+  "ExecuteLuaEnabled": true,
+  "HttpVerbose": true,
+  "HttpTimeout": 60,
+  
+  "UserMetadata": {
+    "4200": "StudyComments",
+    "4201": "SeriesComments"
+  },
+  
+  "DefaultPrivateCreator": "",
+  
+  "StorageAccessOnFind": "Always",
+  "MetricsEnabled": true,
+  
+  "WebDavEnabled": false,
+  
+  "Plugins": [],
+  
+  "HttpsCACertificates": "",
+  
+  "Lua": [
+    "function OnStoredInstance(instanceId, tags, metadata, origin)",
+    "  local studyId = tags['StudyInstanceUID']",
+    "  local patientId = tags['PatientID'] or 'UNKNOWN'",
+    "  local modality = tags['Modality'] or 'UNKNOWN'",
+    "  local studyDate = tags['StudyDate'] or ''",
+    "  local studyDescription = tags['StudyDescription'] or ''",
+    "  local seriesDescription = tags['SeriesDescription'] or ''",
+    "  ",
+    "  -- Determine exam type based on modality and descriptions",
+    "  local examType = 'unknown'",
+    "  if modality == 'US' and string.find(string.lower(studyDescription), 'echo') then",
+    "    examType = 'echo_complete'",
+    "  elseif modality == 'US' and (string.find(string.lower(studyDescription), 'carotid') or string.find(string.lower(seriesDescription), 'carotid')) then",
+    "    examType = 'vascular_carotid'",
+    "  elseif modality == 'CT' then",
+    "    examType = 'ct_scan'",
+    "  elseif modality == 'MR' then",
+    "    examType = 'mri_scan'",
+    "  elseif modality == 'CR' or modality == 'DX' then",
+    "    examType = 'xray'",
+    "  end",
+    "  ",
+    "  local payload = {}",
+    "  payload['study_uid'] = studyId",
+    "  payload['patient_id'] = patientId",
+    "  payload['modality'] = modality",
+    "  payload['study_date'] = studyDate",
+    "  payload['study_description'] = studyDescription",
+    "  payload['series_description'] = seriesDescription",
+    "  payload['exam_type'] = examType",
+    "  payload['orthanc_id'] = instanceId",
+    "  payload['origin'] = origin['RequestOrigin']",
+    "  payload['timestamp'] = os.date('!%Y-%m-%dT%H:%M:%SZ')",
+    "  ",
+    "  local jsonPayload = DumpJson(payload)",
+    "  ",
+    "  -- Send webhook to backend",
+    "  local response = {}",
+    "  local body, status = HttpPost(jsonPayload, 'http://backend:8000/studies/' .. studyId .. '/ingest')",
+    "  ",
+    "  if status ~= 200 then",
+    "    print('Webhook failed with status: ' .. tostring(status))",
+    "  else",
+    "    print('Study ingested successfully: ' .. studyId)",
+    "  end",
+    "end",
+    "",
+    "function OnStableStudy(studyId, tags, metadata)",
+    "  print('Study is now stable: ' .. studyId)",
+    "  -- Additional processing can be added here",
+    "end"
+  ]
+}

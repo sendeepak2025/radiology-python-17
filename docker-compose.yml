@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: kiro-mini-mysql
+    environment:
+      MYSQL_DATABASE: kiro_mini
+      MYSQL_USER: kiro_user
+      MYSQL_PASSWORD: kiro_password
+      MYSQL_ROOT_PASSWORD: kiro_root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - kiro-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Queue
+  redis:
+    image: redis:7-alpine
+    container_name: kiro-mini-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kiro-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Orthanc DICOM Server
+  orthanc:
+    image: orthancteam/orthanc:24.3.3
+    container_name: kiro-mini-orthanc
+    ports:
+      - "4242:4242"  # DICOM port
+      - "8042:8042"  # Web interface
+    volumes:
+      - ./configs/orthanc.json:/etc/orthanc/orthanc.json:ro
+      - orthanc_data:/var/lib/orthanc/db
+      - orthanc_storage:/var/lib/orthanc/storage
+    networks:
+      - kiro-network
+    depends_on:
+      - backend
+    environment:
+      - ORTHANC_NAME=KiroMiniOrthanc
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8042/system"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kiro-mini-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+pymysql://kiro_user:kiro_password@mysql:3306/kiro_mini
+      - REDIS_URL=redis://redis:6379/0
+      - ORTHANC_URL=http://orthanc:8042
+      - BACKEND_URL=http://localhost:8000
+    volumes:
+      - ./backend:/app
+      - dicom_storage:/app/storage
+    networks:
+      - kiro-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AI Worker Service
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: kiro-mini-worker
+    environment:
+      - DATABASE_URL=mysql+pymysql://kiro_user:kiro_password@mysql:3306/kiro_mini
+      - REDIS_URL=redis://redis:6379/0
+      - ORTHANC_URL=http://orthanc:8042
+    volumes:
+      - ./backend:/app
+    networks:
+      - kiro-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kiro-mini-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:8000
+      - REACT_APP_ORTHANC_URL=http://localhost:8042
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - kiro-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  redis_data:
+  orthanc_data:
+  orthanc_storage:
+  dicom_storage:
+
+networks:
+  kiro-network:
+    driver: bridge

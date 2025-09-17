@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiro Patient Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .patients-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .patient-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .patient-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .patient-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .patient-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .patient-id {
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+            min-width: 80px;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .patient-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 2px solid #e1e5e9;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .current-page {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .controls-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Kiro Patient Management</h1>
+            <p>Simple, secure patient data management system</p>
+        </div>
+
+        <div class="controls">
+            <div class="controls-row">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search patients by name, ID, or MRN...">
+                </div>
+                <button class="btn btn-primary" onclick="searchPatients()">🔍 Search</button>
+                <button class="btn btn-success" onclick="openCreateModal()">➕ Add Patient</button>
+                <button class="btn btn-secondary" onclick="loadPatients()">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        <div id="successMessage" class="success" style="display: none;"></div>
+
+        <div id="loadingMessage" class="loading" style="display: none;">
+            Loading patients...
+        </div>
+
+        <div id="patientsContainer" class="patients-grid"></div>
+
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <!-- Patient Modal -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add New Patient</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="patientForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="patientId">Patient ID *</label>
+                        <input type="text" id="patientId" name="patient_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="medicalRecordNumber">Medical Record Number</label>
+                        <input type="text" id="medicalRecordNumber" name="medical_record_number">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name *</label>
+                        <input type="text" id="firstName" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name *</label>
+                        <input type="text" id="lastName" name="last_name" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="middleName">Middle Name</label>
+                        <input type="text" id="middleName" name="middle_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender *</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="M">Male</option>
+                            <option value="F">Female</option>
+                            <option value="O">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth *</label>
+                        <input type="date" id="dateOfBirth" name="date_of_birth" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" name="address">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city">
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state" name="state">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="zipCode">ZIP Code</label>
+                    <input type="text" id="zipCode" name="zip_code">
+                </div>
+
+                <div class="form-group">
+                    <label for="allergies">Allergies</label>
+                    <textarea id="allergies" name="allergies" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="medicalHistory">Medical History</label>
+                    <textarea id="medicalHistory" name="medical_history" rows="3"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Save Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentPage = 1;
+        let currentSearch = '';
+        let editingPatientId = null;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPatients();
+            
+            // Add enter key support for search
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchPatients();
+                }
+            });
+        });
+
+        // API Functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        // Load patients with pagination
+        async function loadPatients(page = 1, search = '') {
+            try {
+                showLoading(true);
+                hideMessages();
+
+                const params = new URLSearchParams({
+                    page: page.toString(),
+                    per_page: '10'
+                });
+
+                if (search) {
+                    params.append('search', search);
+                }
+
+                const data = await apiCall(`/patients?${params}`);
+                
+                currentPage = page;
+                currentSearch = search;
+                
+                displayPatients(data.patients);
+                displayPagination(data);
+                
+            } catch (error) {
+                showError(`Failed to load patients: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Search patients
+        function searchPatients() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            loadPatients(1, searchTerm);
+        }
+
+        // Display patients in the grid
+        function displayPatients(patients) {
+            const container = document.getElementById('patientsContainer');
+            
+            if (patients.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No patients found</h3>
+                        <p>Try adjusting your search criteria or add a new patient.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = patients.map(patient => `
+                <div class="patient-card">
+                    <div class="patient-header">
+                        <div class="patient-name">${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}</div>
+                        <div class="patient-id">ID: ${patient.patient_id}</div>
+                    </div>
+                    
+                    <div class="patient-info">
+                        <div class="info-item">
+                            <span class="info-label">DOB:</span>
+                            <span class="info-value">${formatDate(patient.date_of_birth)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Gender:</span>
+                            <span class="info-value">${formatGender(patient.gender)}</span>
+                        </div>
+                        ${patient.phone ? `
+                        <div class="info-item">
+                            <span class="info-label">Phone:</span>
+                            <span class="info-value">${patient.phone}</span>
+                        </div>
+                        ` : ''}
+                        ${patient.email ? `
+                        <div class="info-item">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">${patient.email}</span>
+                        </div>
+                        ` : ''}
+                        ${patient.medical_record_number ? `
+                        <div class="info-item">
+                            <span class="info-label">MRN:</span>
+                            <span class="info-value">${patient.medical_record_number}</span>
+                        </div>
+                        ` : ''}
+                        ${patient.city && patient.state ? `
+                        <div class="info-item">
+                            <span class="info-label">Location:</span>
+                            <span class="info-value">${patient.city}, ${patient.state}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="patient-actions">
+                        <button class="btn btn-primary" onclick="viewPatient('${patient.patient_id}')">👁️ View</button>
+                        <button class="btn btn-secondary" onclick="editPatient('${patient.patient_id}')">✏️ Edit</button>
+                        <button class="btn btn-danger" onclick="deletePatient('${patient.patient_id}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display pagination controls
+        function displayPagination(data) {
+            const container = document.getElementById('pagination');
+            
+            if (data.total_pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+            
+            // Previous button
+            paginationHTML += `
+                <button ${data.page <= 1 ? 'disabled' : ''} onclick="loadPatients(${data.page - 1}, '${currentSearch}')">
+                    ← Previous
+                </button>
+            `;
+
+            // Page numbers
+            const startPage = Math.max(1, data.page - 2);
+            const endPage = Math.min(data.total_pages, data.page + 2);
+
+            if (startPage > 1) {
+                paginationHTML += `<button onclick="loadPatients(1, '${currentSearch}')">1</button>`;
+                if (startPage > 2) {
+                    paginationHTML += `<span>...</span>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                paginationHTML += `
+                    <button class="${i === data.page ? 'current-page' : ''}" onclick="loadPatients(${i}, '${currentSearch}')">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            if (endPage < data.total_pages) {
+                if (endPage < data.total_pages - 1) {
+                    paginationHTML += `<span>...</span>`;
+                }
+                paginationHTML += `<button onclick="loadPatients(${data.total_pages}, '${currentSearch}')">${data.total_pages}</button>`;
+            }
+
+            // Next button
+            paginationHTML += `
+                <button ${data.page >= data.total_pages ? 'disabled' : ''} onclick="loadPatients(${data.page + 1}, '${currentSearch}')">
+                    Next →
+                </button>
+            `;
+
+            container.innerHTML = paginationHTML;
+        }
+
+        // Modal functions
+        function openCreateModal() {
+            editingPatientId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Patient';
+            document.getElementById('submitBtn').textContent = 'Save Patient';
+            document.getElementById('patientForm').reset();
+            document.getElementById('patientId').disabled = false;
+            document.getElementById('patientModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('patientModal').style.display = 'none';
+            editingPatientId = null;
+        }
+
+        // View patient details
+        async function viewPatient(patientId) {
+            try {
+                const patient = await apiCall(`/patients/${patientId}`);
+                
+                // Populate form with patient data for viewing
+                populateForm(patient);
+                
+                // Make form read-only
+                const form = document.getElementById('patientForm');
+                const inputs = form.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => input.disabled = true);
+                
+                document.getElementById('modalTitle').textContent = 'View Patient Details';
+                document.getElementById('submitBtn').style.display = 'none';
+                document.getElementById('patientModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Failed to load patient details: ${error.message}`);
+            }
+        }
+
+        // Edit patient
+        async function editPatient(patientId) {
+            try {
+                const patient = await apiCall(`/patients/${patientId}`);
+                
+                editingPatientId = patientId;
+                populateForm(patient);
+                
+                document.getElementById('modalTitle').textContent = 'Edit Patient';
+                document.getElementById('submitBtn').textContent = 'Update Patient';
+                document.getElementById('submitBtn').style.display = 'block';
+                document.getElementById('patientId').disabled = true; // Can't change patient ID
+                
+                // Enable all form fields
+                const form = document.getElementById('patientForm');
+                const inputs = form.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => input.disabled = false);
+                document.getElementById('patientId').disabled = true; // Keep patient ID disabled
+                
+                document.getElementById('patientModal').style.display = 'block';
+                
+            } catch (error) {
+                showError(`Failed to load patient for editing: ${error.message}`);
+            }
+        }
+
+        // Populate form with patient data
+        function populateForm(patient) {
+            document.getElementById('patientId').value = patient.patient_id || '';
+            document.getElementById('firstName').value = patient.first_name || '';
+            document.getElementById('lastName').value = patient.last_name || '';
+            document.getElementById('middleName').value = patient.middle_name || '';
+            document.getElementById('gender').value = patient.gender || '';
+            document.getElementById('dateOfBirth').value = patient.date_of_birth || '';
+            document.getElementById('phone').value = patient.phone || '';
+            document.getElementById('email').value = patient.email || '';
+            document.getElementById('address').value = patient.address || '';
+            document.getElementById('city').value = patient.city || '';
+            document.getElementById('state').value = patient.state || '';
+            document.getElementById('zipCode').value = patient.zip_code || '';
+            document.getElementById('medicalRecordNumber').value = patient.medical_record_number || '';
+            document.getElementById('allergies').value = patient.allergies || '';
+            document.getElementById('medicalHistory').value = patient.medical_history || '';
+        }
+
+        // Handle form submission
+        document.getElementById('patientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const patientData = {};
+            
+            // Convert form data to object, excluding empty strings
+            for (let [key, value] of formData.entries()) {
+                if (value.trim() !== '') {
+                    patientData[key] = value.trim();
+                }
+            }
+
+            try {
+                if (editingPatientId) {
+                    // Update existing patient
+                    await apiCall(`/patients/${editingPatientId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(patientData)
+                    });
+                    showSuccess('Patient updated successfully!');
+                } else {
+                    // Create new patient
+                    await apiCall('/patients', {
+                        method: 'POST',
+                        body: JSON.stringify(patientData)
+                    });
+                    showSuccess('Patient created successfully!');
+                }
+                
+                closeModal();
+                loadPatients(currentPage, currentSearch);
+                
+            } catch (error) {
+                showError(`Failed to save patient: ${error.message}`);
+            }
+        });
+
+        // Delete patient
+        async function deletePatient(patientId) {
+            if (!confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                await apiCall(`/patients/${patientId}`, {
+                    method: 'DELETE'
+                });
+                
+                showSuccess('Patient deleted successfully!');
+                loadPatients(currentPage, currentSearch);
+                
+            } catch (error) {
+                showError(`Failed to delete patient: ${error.message}`);
+            }
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString();
+        }
+
+        function formatGender(gender) {
+            const genderMap = { 'M': 'Male', 'F': 'Female', 'O': 'Other' };
+            return genderMap[gender] || gender;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingMessage').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('patientModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
