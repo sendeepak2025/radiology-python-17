@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { uploadService, UploadProgress, UploadResult } from '../services/uploadService';
 import { patientService, Patient as PatientType } from '../services/patientService';
 import { studyService } from '../services/studyService';
+import SmartPatientDashboard from '../components/Patient/SmartPatientDashboard';
 import {
   Box,
   Card,
@@ -158,7 +159,7 @@ const PatientList: React.FC = () => {
   const handleViewStudyDetails = (study: any) => {
     console.log('Viewing study details:', study);
     // Navigate to study details page
-    navigate(`/studies/${study.study_instance_uid}`);
+    navigate(`/studies/${study.study_uid}`);
   };
 
   const handleViewReport = (study: any) => {

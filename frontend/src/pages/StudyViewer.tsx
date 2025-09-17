@@ -55,14 +55,18 @@ import {
   Lock as LockIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
-} from "@mui/icons-material"
+} from "@mui/icons-material";
+import { useParams } from "react-router-dom"
 
 import ProfessionalDicomViewer from "../components/DICOM/ProfessionalDicomViewer"
+import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
+import WorkingDicomViewer from "../components/DICOM/WorkingDicomViewer"
+import SmartDicomViewer from "../components/DICOM/SmartDicomViewer"
 import type { Study } from "../types"
 import { apiService } from "../services/api"
 
 const StudyViewer: React.FC = () => {
-  const studyUid = "1.2.840.113619.2.5.1762583153.215519.978957063.78"
+  const { studyUid } = useParams()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("md"))
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"))
@@ -72,6 +76,7 @@ const StudyViewer: React.FC = () => {
   const [isStarred, setIsStarred] = useState(false)
   const [urgentFindings, setUrgentFindings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
+  const [useSimpleViewer, setUseSimpleViewer] = useState(true) // Start with simple viewer
 
   useEffect(() => {
     console.log("🚀 StudyViewer component mounted with studyUid:", studyUid)
@@ -365,6 +370,15 @@ const StudyViewer: React.FC = () => {
                 <Button startIcon={<BillingIcon />} onClick={handleViewBilling} variant="outlined" size="medium">
                   Billing
                 </Button>
+
+                <Button
+                  onClick={() => setUseSimpleViewer(!useSimpleViewer)}
+                  variant="outlined"
+                  size="medium"
+                  color={useSimpleViewer ? "primary" : "secondary"}
+                >
+                  {useSimpleViewer ? "Professional View" : "Simple View"}
+                </Button>
               </Box>
 
               {/* Secondary Actions */}
@@ -465,10 +479,10 @@ const StudyViewer: React.FC = () => {
                 <Typography variant="body2" fontWeight={600}>
                   {study.study_date
                     ? new Date(study.study_date).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })
                     : "Not available"}
                 </Typography>
               </Box>
@@ -612,11 +626,11 @@ const StudyViewer: React.FC = () => {
           }}
         >
           {study ? (
-            <ProfessionalDicomViewer
+            <SmartDicomViewer
               study={study}
               onError={(error) => {
-                console.error("DICOM Viewer Error:", error)
-                setError(`DICOM Viewer Error: ${error}`)
+                console.error("Smart DICOM Viewer Error:", error)
+                setError(`Smart DICOM Viewer Error: ${error}`)
               }}
             />
           ) : (

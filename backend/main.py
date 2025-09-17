@@ -332,7 +332,7 @@ async def get_study(study_uid: str, db: SessionLocal = Depends(get_db)):
         study = await study_service.get_study_with_images(db, study_uid)
         
         if not study:
-            raise HTTPException(status_code=404, detail="Study not found")
+            raise HTTPException(status_code=404, detail="Study not 1234 found")
         
         return study
         
@@ -1410,7 +1410,7 @@ async def send_webhook_notification(
         if notification_type == "study":
             study = db.query(Study).filter(Study.study_uid == resource_id).first()
             if not study:
-                raise HTTPException(status_code=404, detail="Study not found")
+                raise HTTPException(status_code=404, detail="Study not found main.py    ")
             
             result = await webhook_service.send_study_notification(
                 db=db,

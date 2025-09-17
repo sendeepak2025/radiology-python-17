@@ -1,458 +1,259 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Alert,
-  Paper,
-  IconButton,
-  Tooltip,
-  Slider,
-  Grid,
-  Card,
-  CardContent,
-  LinearProgress,
-} from '@mui/material';
-import {
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
-  RotateLeft as RotateLeftIcon,
-  RotateRight as RotateRightIcon,
-  Refresh as ResetIcon,
-  Fullscreen as FullscreenIcon,
-  PlayArrow as PlayIcon,
-  Pause as PauseIcon,
-} from '@mui/icons-material';
-
-interface Study {
-  study_uid: string;
-  patient_id: string;
-  patient_name?: string;
-  study_date: string;
-  modality: string;
-  exam_type: string;
-  study_description: string;
-  image_urls?: string[];
-  dicom_url?: string;
-}
+import React, { useEffect, useRef, useState } from 'react';
+import { Box, Typography, Paper, Alert, CircularProgress, Button } from '@mui/material';
+import type { Study } from '../../types';
 
 interface WorkingDicomViewerProps {
   study: Study;
   onError?: (error: string) => void;
 }
 
-const WorkingDicomViewer: React.FC<WorkingDicomViewerProps> = ({
-  study,
-  onError,
-}) => {
-  const viewerRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const WorkingDicomViewer: React.FC<WorkingDicomViewerProps> = ({ study, onError }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loadingMessage, setLoadingMessage] = useState('Initializing viewer...');
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  
-  // Viewer state
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [totalImages, setTotalImages] = useState(0);
-  const [windowWidth, setWindowWidth] = useState(400);
-  const [windowCenter, setWindowCenter] = useState(40);
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-  // Mock image data for demonstration
-  const [imageData, setImageData] = useState<any>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  const initializeViewer = useCallback(async () => {
+  const loadDicomImage = async () => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       setError(null);
-      setLoadingMessage('Loading study data...');
-      setLoadingProgress(20);
 
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setLoadingMessage('Processing DICOM images...');
-      setLoadingProgress(50);
+      console.log('🔍 Study data:', study);
 
-      // Mock image processing
-      const mockImageData = {
-        width: 512,
-        height: 512,
-        pixelData: new Uint16Array(512 * 512).fill(0).map((_, i) => {
-          // Create a simple test pattern
-          const x = i % 512;
-          const y = Math.floor(i / 512);
-          const centerX = 256;
-          const centerY = 256;
-          const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-          return Math.floor(Math.sin(distance / 20) * 1000 + 2000);
-        }),
-        windowWidth: 400,
-        windowCenter: 40,
-      };
+      // Try processed images first (from advanced processor)
+      const studyAny = study as any;
+      
+      // Priority order: normalized > windowed > thumbnail > preview > original
+      const imageUrls = [
+        studyAny.processed_images?.normalized,
+        studyAny.processed_images?.windowed, 
+        studyAny.processed_images?.thumbnail,
+        studyAny.preview_url,
+        studyAny.thumbnail_url
+      ].filter(Boolean);
 
-      setImageData(mockImageData);
-      setTotalImages(study.image_urls?.length || 1);
-      setLoadingProgress(80);
-      
-      setLoadingMessage('Rendering image...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setLoadingProgress(100);
-      setLoadingMessage('Complete!');
-      
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 200);
+      if (imageUrls.length > 0) {
+        for (const imageUrl of imageUrls) {
+          const fullUrl = imageUrl.startsWith('http') ? imageUrl : `http://localhost:8000${imageUrl}`;
+          console.log('🔍 Trying image URL:', fullUrl);
+          
+          const success = await tryLoadImage(fullUrl);
+          if (success) {
+            return;
+          }
+        }
+      }
+
+      // No processed images available, try DICOM file
+      console.log('ℹ️ No processed images available, trying DICOM file...');
+      loadDicomFile();
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load DICOM study';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load DICOM image';
+      console.error('❌ DICOM loading error:', errorMessage);
       setError(errorMessage);
-      onError?.(errorMessage);
-      setIsLoading(false);
+      setLoading(false);
+      if (onError) {
+        onError(errorMessage);
+      }
     }
-  }, [study, onError]);
+  };
+
+  const tryLoadImage = (url: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        console.log('✅ Image loaded successfully from:', url);
+        drawImageToCanvas(img);
+        setImageLoaded(true);
+        setLoading(false);
+        resolve(true);
+      };
+
+      img.onerror = () => {
+        console.log('❌ Failed to load image from:', url);
+        resolve(false);
+      };
+
+      img.src = url;
+    });
+  };
+
+  const loadDicomFile = async () => {
+    const url = `http://localhost:8000${study.dicom_url}`;
+    try {
+      console.log('🔍 Fetching DICOM file...');
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch DICOM file: ${response.status}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('✅ DICOM file loaded, size:', arrayBuffer.byteLength);
+
+      // For now, show file info instead of trying to parse DICOM
+      // This avoids complex DICOM parsing libraries
+      showDicomInfo(arrayBuffer);
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load DICOM file';
+      console.error('❌ DICOM file loading error:', errorMessage);
+      setError(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const showDicomInfo = (arrayBuffer: ArrayBuffer) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = 512;
+    canvas.height = 512;
+
+    // Clear canvas
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw DICOM file info
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    
+    const lines = [
+      'DICOM File Loaded',
+      `Size: ${Math.round(arrayBuffer.byteLength / 1024)} KB`,
+      `File: ${study.original_filename}`,
+      `Patient: ${study.patient_id}`,
+      `Modality: ${study.modality}`,
+      '',
+      'DICOM image parsing requires',
+      'specialized medical imaging libraries.',
+      '',
+      'File is available for download below.'
+    ];
+
+    lines.forEach((line, index) => {
+      ctx.fillText(line, canvas.width / 2, 50 + (index * 25));
+    });
+
+    setImageLoaded(true);
+    setLoading(false);
+  };
+
+  const drawImageToCanvas = (img: HTMLImageElement) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size to match image or max 512x512
+    const maxSize = 512;
+    let { width, height } = img;
+    
+    if (width > maxSize || height > maxSize) {
+      const ratio = Math.min(maxSize / width, maxSize / height);
+      width *= ratio;
+      height *= ratio;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw image
+    ctx.drawImage(img, 0, 0, width, height);
+  };
 
   useEffect(() => {
-    initializeViewer();
-  }, [initializeViewer]);
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev * 1.2, 5));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev / 1.2, 0.1));
-  };
-
-  const handleRotateLeft = () => {
-    setRotation(prev => prev - 90);
-  };
-
-  const handleRotateRight = () => {
-    setRotation(prev => prev + 90);
-  };
-
-  const handleReset = () => {
-    setZoom(1);
-    setRotation(0);
-    setWindowWidth(400);
-    setWindowCenter(40);
-  };
-
-  const handleWindowWidthChange = (_: Event, value: number | number[]) => {
-    setWindowWidth(Array.isArray(value) ? value[0] : value);
-  };
-
-  const handleWindowCenterChange = (_: Event, value: number | number[]) => {
-    setWindowCenter(Array.isArray(value) ? value[0] : value);
-  };
-
-  const handleImageNavigation = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && currentImageIndex > 0) {
-      setCurrentImageIndex(prev => prev - 1);
-    } else if (direction === 'next' && currentImageIndex < totalImages - 1) {
-      setCurrentImageIndex(prev => prev + 1);
-    }
-  };
-
-  const togglePlayback = () => {
-    setIsPlaying(prev => !prev);
-  };
-
-  // Auto-play functionality
-  useEffect(() => {
-    if (isPlaying && totalImages > 1) {
-      const interval = setInterval(() => {
-        setCurrentImageIndex(prev => {
-          if (prev >= totalImages - 1) {
-            return 0; // Loop back to first image
-          }
-          return prev + 1;
-        });
-      }, 500); // Change image every 500ms
-
-      return () => clearInterval(interval);
-    }
-  }, [isPlaying, totalImages]);
-
-  if (isLoading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          minHeight: 400,
-          p: 3,
-        }}
-      >
-        <CircularProgress size={60} sx={{ mb: 2 }} />
-        <Typography variant="h6" gutterBottom>
-          {loadingMessage}
-        </Typography>
-        <Box sx={{ width: '100%', maxWidth: 300, mt: 2 }}>
-          <LinearProgress variant="determinate" value={loadingProgress} />
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-            {loadingProgress}%
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert 
-        severity="error" 
-        sx={{ m: 2 }}
-        action={
-          <IconButton color="inherit" size="small" onClick={initializeViewer}>
-            <ResetIcon />
-          </IconButton>
-        }
-      >
-        <Typography variant="subtitle1" gutterBottom>
-          DICOM Viewer Error
-        </Typography>
-        <Typography variant="body2">
-          {error}
-        </Typography>
-      </Alert>
-    );
-  }
+    loadDicomImage();
+  }, [study]);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Study Information Header */}
-      <Paper sx={{ p: 2, mb: 1 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={8}>
-            <Typography variant="h6" gutterBottom>
-              {study.patient_name || `Patient ${study.patient_id}`}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {study.study_description} • {study.modality} • {study.study_date}
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Typography variant="body2" align="right">
-              Image {currentImageIndex + 1} of {totalImages}
-            </Typography>
-          </Grid>
-        </Grid>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          DICOM Image Viewer
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {study.study_description} - {study.original_filename}
+        </Typography>
       </Paper>
 
-      <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
-        {/* Main Viewer */}
-        <Paper sx={{ flex: 1, position: 'relative', minHeight: 400 }}>
-          {/* Toolbar */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 8,
-              left: 8,
-              zIndex: 10,
-              display: 'flex',
-              gap: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: 1,
-              p: 0.5,
-            }}
-          >
-            <Tooltip title="Zoom In">
-              <IconButton size="small" onClick={handleZoomIn} sx={{ color: 'white' }}>
-                <ZoomInIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom Out">
-              <IconButton size="small" onClick={handleZoomOut} sx={{ color: 'white' }}>
-                <ZoomOutIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Rotate Left">
-              <IconButton size="small" onClick={handleRotateLeft} sx={{ color: 'white' }}>
-                <RotateLeftIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Rotate Right">
-              <IconButton size="small" onClick={handleRotateRight} sx={{ color: 'white' }}>
-                <RotateRightIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Reset View">
-              <IconButton size="small" onClick={handleReset} sx={{ color: 'white' }}>
-                <ResetIcon />
-              </IconButton>
-            </Tooltip>
-            {totalImages > 1 && (
-              <Tooltip title={isPlaying ? "Pause" : "Play"}>
-                <IconButton size="small" onClick={togglePlayback} sx={{ color: 'white' }}>
-                  {isPlaying ? <PauseIcon /> : <PlayIcon />}
-                </IconButton>
-              </Tooltip>
-            )}
+      <Paper sx={{ flexGrow: 1, p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        {loading && (
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography variant="body2">Loading DICOM image...</Typography>
           </Box>
+        )}
 
-          {/* Image Display Area */}
-          <Box
-            ref={viewerRef}
-            sx={{
-              width: '100%',
-              height: '100%',
-              minHeight: 400,
-              backgroundColor: '#000',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Mock DICOM Image Display */}
-            <Box
-              sx={{
-                width: 400,
-                height: 400,
-                backgroundColor: '#333',
-                border: '2px solid #666',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transition: 'transform 0.2s ease',
-                backgroundImage: `
-                  radial-gradient(circle at 50% 50%, 
-                    rgba(255,255,255,0.8) 0%, 
-                    rgba(255,255,255,0.4) 30%, 
-                    rgba(255,255,255,0.1) 60%, 
-                    rgba(0,0,0,0.2) 100%
-                  )
-                `,
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, maxWidth: 400 }}>
+            {error}
+          </Alert>
+        )}
+
+        <canvas
+          ref={canvasRef}
+          style={{
+            maxWidth: '100%',
+            maxHeight: '400px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            display: imageLoaded ? 'block' : 'none'
+          }}
+        />
+
+        {imageLoaded && (
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              DICOM File Information
+            </Typography>
+            <Typography variant="caption" display="block" gutterBottom>
+              Patient: {study.patient_id} | Modality: {study.modality} | Date: {study.study_date}
+            </Typography>
+            <Typography variant="caption" display="block" gutterBottom>
+              File Size: {study.file_size ? `${Math.round(study.file_size / 1024)} KB` : 'Unknown'}
+            </Typography>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              sx={{ mt: 1 }}
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = `http://localhost:8000${study.dicom_url}`;
+                link.download = study.original_filename || 'dicom_file.dcm';
+                link.click();
               }}
             >
-              <Typography variant="h4" sx={{ color: '#888', textAlign: 'center' }}>
-                DICOM<br />
-                {study.modality}<br />
-                <Typography variant="body2" component="span">
-                  {currentImageIndex + 1}/{totalImages}
-                </Typography>
-              </Typography>
-            </Box>
+              Download DICOM File
+            </Button>
           </Box>
+        )}
 
-          {/* Navigation Controls */}
-          {totalImages > 1 && (
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 8,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                gap: 1,
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                borderRadius: 1,
-                p: 0.5,
-              }}
+        {!loading && !error && !imageLoaded && (
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              No image data available
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={loadDicomImage}
+              sx={{ mt: 1 }}
             >
-              <IconButton
-                size="small"
-                onClick={() => handleImageNavigation('prev')}
-                disabled={currentImageIndex === 0}
-                sx={{ color: 'white' }}
-              >
-                ←
-              </IconButton>
-              <Typography variant="body2" sx={{ color: 'white', px: 1, py: 0.5 }}>
-                {currentImageIndex + 1} / {totalImages}
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={() => handleImageNavigation('next')}
-                disabled={currentImageIndex === totalImages - 1}
-                sx={{ color: 'white' }}
-              >
-                →
-              </IconButton>
-            </Box>
-          )}
-        </Paper>
-
-        {/* Controls Panel */}
-        <Paper sx={{ width: 300, p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Image Controls
-          </Typography>
-
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom>
-                Window/Level
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" gutterBottom>
-                  Width: {windowWidth}
-                </Typography>
-                <Slider
-                  value={windowWidth}
-                  onChange={handleWindowWidthChange}
-                  min={1}
-                  max={2000}
-                  size="small"
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" gutterBottom>
-                  Center: {windowCenter}
-                </Typography>
-                <Slider
-                  value={windowCenter}
-                  onChange={handleWindowCenterChange}
-                  min={-1000}
-                  max={1000}
-                  size="small"
-                />
-              </Box>
-            </CardContent>
-          </Card>
-
-          <Card sx={{ mb: 2 }}>
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom>
-                Transform
-              </Typography>
-              <Typography variant="body2">
-                Zoom: {zoom.toFixed(2)}x
-              </Typography>
-              <Typography variant="body2">
-                Rotation: {rotation}°
-              </Typography>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom>
-                Study Info
-              </Typography>
-              <Typography variant="body2">
-                Modality: {study.modality}
-              </Typography>
-              <Typography variant="body2">
-                Date: {study.study_date}
-              </Typography>
-              <Typography variant="body2">
-                Images: {totalImages}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Paper>
-      </Box>
+              Retry Loading
+            </Button>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 };

@@ -5,6 +5,7 @@ import { Box, CssBaseline } from '@mui/material';
 import Layout from './components/Layout/Layout';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Dashboard from './pages/Dashboard';
+import SmartMedicalDashboard from './pages/SmartMedicalDashboard';
 import PatientList from './pages/PatientList';
 import StudyList from './pages/StudyList';
 import StudyViewer from './pages/StudyViewer';
@@ -72,6 +73,17 @@ function App() {
                 
                 <Route
                   path="/dashboard"
+                  element={
+                    shouldAuthenticate ? (
+                      <SmartMedicalDashboard />
+                    ) : (
+                      <Navigate to="/login" replace />
+                    )
+                  }
+                />
+                
+                <Route
+                  path="/dashboard-old"
                   element={
                     shouldAuthenticate ? (
                       <Dashboard />
