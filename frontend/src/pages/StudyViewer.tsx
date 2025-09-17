@@ -62,6 +62,7 @@ import ProfessionalDicomViewer from "../components/DICOM/ProfessionalDicomViewer
 import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
 import WorkingDicomViewer from "../components/DICOM/WorkingDicomViewer"
 import SmartDicomViewer from "../components/DICOM/SmartDicomViewer"
+import AdvancedMedicalDicomViewer from "../components/DICOM/AdvancedMedicalDicomViewer"
 import type { Study } from "../types"
 import { apiService } from "../services/api"
 
@@ -251,7 +252,13 @@ const StudyViewer: React.FC = () => {
   }
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ 
+      minHeight: "100vh", 
+      display: "flex", 
+      flexDirection: "column",
+      bgcolor: "background.default",
+      overflow: "hidden"
+    }}>
       {/* Enhanced Professional Header */}
       <Paper
         sx={{
@@ -598,50 +605,42 @@ const StudyViewer: React.FC = () => {
         </Grid>
       </Paper>
 
-      {/* Main Content */}
-      <Box sx={{ flexGrow: 1, display: "flex", position: "relative" }}>
-        {/* Mobile Menu Button */}
-        {isMobile && (
-          <Fab
-            color="primary"
-            size="small"
-            sx={{
-              position: "fixed",
-              top: 16,
-              right: 16,
-              zIndex: 1300,
-            }}
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <CloseIcon /> : <MenuIcon />}
-          </Fab>
-        )}
-
-        {/* Image Viewer */}
+      {/* Responsive Main Content Area */}
+      <Box sx={{ 
+        flexGrow: 1, 
+        display: "flex", 
+        flexDirection: { xs: "column", md: "row" },
+        minHeight: 0,
+        overflow: "hidden"
+      }}>
+        {/* DICOM Viewer - Full Screen on Mobile, Left Side on Desktop */}
         <Box
           sx={{
-            flexGrow: 1,
-            minHeight: 0,
-            width: isMobile ? "100%" : isTablet ? "calc(100% - 280px)" : "calc(100% - 300px)",
+            flex: 1,
+            minHeight: { xs: "60vh", md: "calc(100vh - 120px)" },
+            maxHeight: { xs: "60vh", md: "calc(100vh - 120px)" },
+            overflow: "hidden",
+            order: { xs: 1, md: 0 }
           }}
         >
           {study ? (
-            <SmartDicomViewer
+            <AdvancedMedicalDicomViewer
               study={study}
               onError={(error) => {
-                console.error("Smart DICOM Viewer Error:", error)
-                setError(`Smart DICOM Viewer Error: ${error}`)
+                console.error("Advanced Medical DICOM Viewer Error:", error)
+                setError(`Advanced Medical DICOM Viewer Error: ${error}`)
               }}
             />
           ) : (
             <Box
               sx={{
-                p: 2,
+                p: 3,
                 textAlign: "center",
                 height: "100%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                bgcolor: "background.paper"
               }}
             >
               <Typography variant="h6" color="text.secondary">
@@ -651,98 +650,210 @@ const StudyViewer: React.FC = () => {
           )}
         </Box>
 
-        {/* Study Information Panel - Responsive Drawer */}
-        <Drawer
-          variant={isMobile ? "temporary" : "persistent"}
-          anchor="right"
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+        {/* Study Information Panel - Responsive */}
+        <Box
           sx={{
-            width: isMobile ? 280 : isTablet ? 280 : 300,
-            flexShrink: 0,
-            "& .MuiDrawer-paper": {
-              width: isMobile ? 280 : isTablet ? 280 : 300,
-              boxSizing: "border-box",
-              position: isMobile ? "fixed" : "relative",
-              height: isMobile ? "100vh" : "auto",
-              top: isMobile ? 0 : "auto",
-            },
+            width: { xs: "100%", md: 320, lg: 360 },
+            minHeight: { xs: "40vh", md: "calc(100vh - 120px)" },
+            maxHeight: { xs: "40vh", md: "calc(100vh - 120px)" },
+            overflow: "auto",
+            bgcolor: "background.paper",
+            borderLeft: { md: 1 },
+            borderTop: { xs: 1, md: 0 },
+            borderColor: "divider",
+            order: { xs: 2, md: 1 }
           }}
         >
-          <Box sx={{ p: 2, overflow: "auto", height: "100%" }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Study Information
-            </Typography>
+          <Box sx={{ 
+            p: { xs: 2, sm: 3 }, 
+            height: "100%",
+            display: "flex",
+            flexDirection: "column"
+          }}>
+            {/* Header */}
+            <Box sx={{ 
+              pb: 2, 
+              borderBottom: 1, 
+              borderColor: "divider",
+              mb: 2,
+              flexShrink: 0
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
+                📊 Study Information
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Patient and study details
+              </Typography>
+            </Box>
 
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Patient Information
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Patient Name:</strong> {study.patient_info?.name || study.patient_id || "Unknown"}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Patient ID:</strong> {study.patient_id || "N/A"}
-                </Typography>
-                {study.patient_info?.date_of_birth && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Date of Birth:</strong> {new Date(study.patient_info.date_of_birth).toLocaleDateString()}
-                  </Typography>
-                )}
-                {study.patient_info?.date_of_birth && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Age:</strong> {getPatientAge(study)} years
-                  </Typography>
-                )}
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Gender:</strong> {study.patient_info?.gender || "Unknown"}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Study Date:</strong>{" "}
-                  {study.study_date ? new Date(study.study_date).toLocaleDateString() : "N/A"}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Modality:</strong> {study.modality || "N/A"}
-                </Typography>
-              </CardContent>
-            </Card>
+            {/* Scrollable Content */}
+            <Box sx={{ 
+              flex: 1, 
+              overflow: "auto",
+              pr: 1,
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(0,0,0,0.1)',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: 'rgba(0,0,0,0.5)',
+                },
+              },
+            }}>
 
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Study Details
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Study UID:</strong>
-                </Typography>
-                <Typography variant="caption" sx={{ wordBreak: "break-all", mb: 2, display: "block" }}>
-                  {study.study_uid}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Exam Type:</strong> {study.exam_type || "N/A"}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Description:</strong> {study.description || study.study_description || "N/A"}
-                </Typography>
-                {study.study_time && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Study Time:</strong> {study.study_time}
-                  </Typography>
-                )}
-                {study.workflow_status && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Workflow Status:</strong> {study.workflow_status}
-                  </Typography>
-                )}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="body2">
-                    <strong>Status:</strong>
-                  </Typography>
-                  <Chip label={study.status} size="small" color={getStatusColor(study.status) as any} />
-                </Box>
-              </CardContent>
-            </Card>
+              {/* Patient Information Card */}
+              <Card sx={{ 
+                mb: 2, 
+                boxShadow: 1,
+                '&:hover': { boxShadow: 2 },
+                transition: 'box-shadow 0.2s'
+              }}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <PersonIcon sx={{ mr: 1, color: "primary.main" }} />
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Patient Information
+                    </Typography>
+                  </Box>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Name:</strong> {study.patient_info?.name || study.patient_id || "Unknown"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>ID:</strong> {study.patient_id || "N/A"}
+                      </Typography>
+                    </Grid>
+                    {study.patient_info?.date_of_birth && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>DOB:</strong> {new Date(study.patient_info.date_of_birth).toLocaleDateString()}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {study.patient_info?.date_of_birth && (
+                      <Grid item xs={6}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Age:</strong> {getPatientAge(study)} years
+                        </Typography>
+                      </Grid>
+                    )}
+                    <Grid item xs={6}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Gender:</strong> {study.patient_info?.gender || "Unknown"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Study Date:</strong>{" "}
+                        {study.study_date ? new Date(study.study_date).toLocaleDateString() : "N/A"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="body2">
+                          <strong>Modality:</strong>
+                        </Typography>
+                        <Chip 
+                          label={study.modality || "N/A"} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined"
+                        />
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Study Details Card */}
+              <Card sx={{ 
+                mb: 2, 
+                boxShadow: 1,
+                '&:hover': { boxShadow: 2 },
+                transition: 'box-shadow 0.2s'
+              }}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <HospitalIcon sx={{ mr: 1, color: "primary.main" }} />
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Study Details
+                    </Typography>
+                  </Box>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Study UID:</strong>
+                      </Typography>
+                      <Paper sx={{ 
+                        p: 1, 
+                        bgcolor: "grey.50", 
+                        mb: 2,
+                        border: 1,
+                        borderColor: "grey.200"
+                      }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            wordBreak: "break-all", 
+                            fontFamily: "monospace",
+                            fontSize: "0.7rem"
+                          }}
+                        >
+                          {study.study_uid}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Exam Type:</strong> {study.exam_type || "N/A"}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Description:</strong> {study.description || study.study_description || "N/A"}
+                      </Typography>
+                    </Grid>
+                    {study.study_time && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Study Time:</strong> {study.study_time}
+                        </Typography>
+                      </Grid>
+                    )}
+                    {study.workflow_status && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Workflow Status:</strong> {study.workflow_status}
+                        </Typography>
+                      </Grid>
+                    )}
+                    <Grid item xs={12}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+                        <Typography variant="body2">
+                          <strong>Status:</strong>
+                        </Typography>
+                        <Chip 
+                          label={study.status} 
+                          size="small" 
+                          color={getStatusColor(study.status) as any}
+                          sx={{ fontWeight: 600 }}
+                        />
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
 
             {/* Study Statistics Section */}
             {study.study_statistics && (
@@ -768,318 +879,72 @@ const StudyViewer: React.FC = () => {
               </Card>
             )}
 
-            {/* Processing Information Section */}
-            {study.processing_info && (
-              <Card sx={{ mb: 2 }}>
-                <CardContent>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Processing Information
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Upload Duration:</strong>{" "}
-                    {study.processing_info.upload_duration_ms
-                      ? `${study.processing_info.upload_duration_ms} ms`
-                      : "N/A"}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Processing Steps:</strong> {study.processing_info.processing_steps || "N/A"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Processing Status:</strong> {study.processing_info.status || "N/A"}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Image URLs Section */}
-            {study.image_urls && study.image_urls.length > 0 && (
-              <Card sx={{ mb: 2 }}>
-                <CardContent>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Available Images ({study.image_urls.length})
-                  </Typography>
-                  {study.image_urls.map((url, index) => (
-                    <Typography key={index} variant="body2" sx={{ mb: 1, wordBreak: "break-all" }}>
-                      <strong>Image {index + 1}:</strong> {url}
+              {/* Quick Actions Card */}
+              <Card sx={{ 
+                mb: 2, 
+                boxShadow: 1,
+                '&:hover': { boxShadow: 2 },
+                transition: 'box-shadow 0.2s'
+              }}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <AssessmentIcon sx={{ mr: 1, color: "primary.main" }} />
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Quick Actions
                     </Typography>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Reports Section */}
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Reports ({study.reports?.length || 0})
-                </Typography>
-
-                {study.reports && study.reports.length > 0 ? (
-                  study.reports.map((report, index) => (
-                    <Box key={report.report_id} sx={{ mb: index < study.reports!.length - 1 ? 2 : 0 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          Report {index + 1}
-                        </Typography>
-                        <Chip
-                          label={report.status}
-                          size="small"
-                          color={report.status === "final" ? "success" : "warning"}
-                        />
-                      </Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                        Created: {new Date(report.created_at).toLocaleString()}
-                      </Typography>
-                      {report.finalized_at && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                          Finalized: {new Date(report.finalized_at).toLocaleString()}
-                        </Typography>
-                      )}
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                        {report.ai_generated ? "AI Generated" : "Manual"}
-                      </Typography>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleViewReport(report.report_id)}
-                        fullWidth
+                  </Box>
+                  
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Button 
+                        variant="contained" 
+                        fullWidth 
+                        startIcon={<ReportIcon />}
+                        onClick={handleCreateReport}
+                        sx={{ mb: 1 }}
                       >
-                        View Report
+                        Create Report
                       </Button>
-                      {index < study.reports!.length - 1 && <Divider sx={{ mt: 2 }} />}
-                    </Box>
-                  ))
-                ) : (
-                  <Box sx={{ textAlign: "center", py: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      No reports available
-                    </Typography>
-                    <Button variant="contained" size="small" onClick={handleCreateReport} fullWidth>
-                      Create Report
-                    </Button>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Intelligent Workflow Panel */}
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-                  <PsychologyIcon color="primary" />
-                  <Typography variant="subtitle2" color="text.secondary">
-                    AI-Powered Workflow
-                  </Typography>
-                </Box>
-
-                {/* Critical Findings Alert */}
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <NotificationIcon fontSize="small" />
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      2 Critical Findings Detected
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
-                    Possible pneumothorax in right lung, enlarged cardiac silhouette
-                  </Typography>
-                </Alert>
-
-                {/* AI Analysis Status */}
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      AI Analysis Progress
-                    </Typography>
-                    <Chip label="85% Complete" size="small" color="info" />
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                    <Chip
-                      icon={<CheckIcon />}
-                      label="Anatomy Detection"
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                    />
-                    <Chip
-                      icon={<CheckIcon />}
-                      label="Pathology Screening"
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                    />
-                    <Chip
-                      icon={<ScheduleIcon />}
-                      label="Report Generation"
-                      size="small"
-                      color="warning"
-                      variant="outlined"
-                    />
-                  </Box>
-                </Box>
-
-                {/* Quick Actions */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Quick Actions
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Button variant="contained" size="small" startIcon={<AIIcon />} fullWidth>
-                      Generate AI Report
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<AssessmentIcon />} fullWidth>
-                      Review Findings
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<ShareIcon />} fullWidth>
-                      Request Consultation
-                    </Button>
-                  </Box>
-                </Box>
-
-                {/* Next Steps Recommendations */}
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Recommended Next Steps
-                  </Typography>
-                  <Box sx={{ pl: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-                      <SpeedIcon fontSize="small" color="error" />
-                      <strong>Urgent:</strong> Contact referring physician about pneumothorax
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-                      <TrendingIcon fontSize="small" color="warning" />
-                      <strong>Follow-up:</strong> Recommend cardiac echo within 48 hours
-                    </Typography>
-                    <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <CheckIcon fontSize="small" color="success" />
-                      <strong>Documentation:</strong> Complete radiology report
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-
-            {/* Collaborative Features Panel */}
-            <Card sx={{ mb: 2 }}>
-              <CardContent>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-                  <GroupIcon color="primary" />
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Collaboration & Sharing
-                  </Typography>
-                </Box>
-
-                {/* Active Collaborators */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Active Collaborators (3)
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-                    <Tooltip title="Dr. Sarah Johnson - Radiologist">
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: "primary.main" }}>SJ</Avatar>
-                    </Tooltip>
-                    <Tooltip title="Dr. Michael Chen - Cardiologist">
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: "secondary.main" }}>MC</Avatar>
-                    </Tooltip>
-                    <Tooltip title="Dr. Emily Davis - Resident">
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: "success.main" }}>ED</Avatar>
-                    </Tooltip>
-                    <IconButton size="small" sx={{ width: 32, height: 32 }}>
-                      <PersonAddIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-
-                {/* Recent Annotations */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Recent Annotations
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, bgcolor: "grey.50", borderRadius: 1 }}
-                    >
-                      <Avatar sx={{ width: 24, height: 24, bgcolor: "primary.main" }}>SJ</Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          Dr. Johnson
-                        </Typography>
-                        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-                          "Suspicious opacity in RUL"
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        2m ago
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, bgcolor: "grey.50", borderRadius: 1 }}
-                    >
-                      <Avatar sx={{ width: 24, height: 24, bgcolor: "secondary.main" }}>MC</Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                          Dr. Chen
-                        </Typography>
-                        <Typography variant="caption" sx={{ display: "block", color: "text.secondary" }}>
-                          "Cardiac silhouette enlarged"
-                        </Typography>
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        5m ago
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-
-                {/* Collaboration Actions */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Collaboration Tools
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Button variant="outlined" size="small" startIcon={<ChatIcon />} fullWidth>
-                      Start Discussion
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<VideoCallIcon />} fullWidth>
-                      Video Consultation
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<ShareIcon />} fullWidth>
-                      Share Study
-                    </Button>
-                  </Box>
-                </Box>
-
-                {/* Study Permissions */}
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Study Access
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      p: 1,
-                      bgcolor: "grey.50",
-                      borderRadius: 1,
-                    }}
-                  >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <VisibilityIcon fontSize="small" color="success" />
-                      <Typography variant="caption">Shared with team</Typography>
-                    </Box>
-                    <IconButton size="small">
-                      <LockIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Button 
+                        variant="outlined" 
+                        fullWidth 
+                        startIcon={<BillingIcon />}
+                        sx={{ mb: 1 }}
+                      >
+                        Generate Bill
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button 
+                        variant="outlined" 
+                        fullWidth 
+                        startIcon={<ShareIcon />}
+                        size="small"
+                      >
+                        Share
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button 
+                        variant="outlined" 
+                        fullWidth 
+                        startIcon={<PrintIcon />}
+                        size="small"
+                      >
+                        Print
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Box>
           </Box>
-        </Drawer>
+        </Box>
       </Box>
     </Box>
   )
 }
 
-export default StudyViewer
+export default StudyViewer;

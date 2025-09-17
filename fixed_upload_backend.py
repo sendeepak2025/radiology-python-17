@@ -383,6 +383,7 @@ async def get_patient_files(patient_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/uploads/{patient_id}/{filename}")
+@app.head("/uploads/{patient_id}/{filename}")
 async def serve_file(patient_id: str, filename: str):
     """Serve uploaded files"""
     try:
@@ -395,6 +396,12 @@ async def serve_file(patient_id: str, filename: str):
         mime_type, _ = mimetypes.guess_type(str(file_path))
         if filename.lower().endswith(('.dcm', '.dicom')):
             mime_type = "application/dicom"
+        elif filename.lower().endswith(('.png',)):
+            mime_type = "image/png"
+        elif filename.lower().endswith(('.jpg', '.jpeg')):
+            mime_type = "image/jpeg"
+        elif filename.lower().endswith(('.gif',)):
+            mime_type = "image/gif"
         
         return FileResponse(
             path=str(file_path),
@@ -561,7 +568,8 @@ async def get_study(study_uid: str, db: Session = Depends(get_db)):
                         generated_uid = f"uploaded_{patient.patient_id}_{file_path.stem}"
                         
                         # Strategy 2: Generate the same DICOM-like UID we use in the list
-                        timestamp = int(stat.st_mtime * 1000000)
+                        file_stat = file_path.stat()
+                        timestamp = int(file_stat.st_mtime * 1000000)
                         expected_uid = f"1.2.840.113619.2.5.{timestamp}.{len(file_path.name)}.{hash(file_path.name) % 1000000000}"
                         
                         # Strategy 3: Multiple matching approaches

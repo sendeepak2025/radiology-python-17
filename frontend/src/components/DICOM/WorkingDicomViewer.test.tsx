@@ -13,6 +13,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const mockStudy = {
+  id: '1',
   study_uid: '1.2.3.4.5.6.7.8.9.1',
   patient_id: 'PAT001',
   patient_name: 'John Doe',
@@ -20,7 +21,9 @@ const mockStudy = {
   modality: 'CT',
   exam_type: 'chest_ct',
   study_description: 'CT Chest with IV Contrast',
-  image_urls: ['http://localhost:8042/wado?studyUID=1.2.3.4.5.6.7.8.9.1&seriesUID=1&objectUID=1']
+  image_urls: ['http://localhost:8042/wado?studyUID=1.2.3.4.5.6.7.8.9.1&seriesUID=1&objectUID=1'],
+  status: 'completed' as const,
+  created_at: '2024-03-10T10:00:00Z'
 };
 
 describe('WorkingDicomViewer', () => {

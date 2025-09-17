@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box, CssBaseline } from '@mui/material';
 
 import Layout from './components/Layout/Layout';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Dashboard from './pages/Dashboard';
-import SmartMedicalDashboard from './pages/SmartMedicalDashboard';
-import PatientList from './pages/PatientList';
+import CleanDashboard from './pages/CleanDashboard';
+import CleanPatientList from './pages/CleanPatientList';
 import StudyList from './pages/StudyList';
 import StudyViewer from './pages/StudyViewer';
 import FolderManager from './pages/FolderManager';
@@ -75,7 +75,7 @@ function App() {
                   path="/dashboard"
                   element={
                     shouldAuthenticate ? (
-                      <SmartMedicalDashboard />
+                      <CleanDashboard />
                     ) : (
                       <Navigate to="/login" replace />
                     )
@@ -97,7 +97,7 @@ function App() {
                   path="/patients"
                   element={
                     shouldAuthenticate ? (
-                      <PatientList />
+                      <CleanPatientList />
                     ) : (
                       <Navigate to="/login" replace />
                     )

@@ -359,6 +359,33 @@ class PatientService {
       throw error;
     }
   }
+
+  /**
+   * Get studies for a patient
+   */
+  async getPatientStudies(patientId: string): Promise<{ studies: any[]; total_studies: number; patient_name?: string }> {
+    try {
+      console.log(`📊 Fetching studies for patient ${patientId}`);
+      const response = await apiService.get<{
+        patient_id: string;
+        patient_name: string;
+        studies: any[];
+        total_studies: number;
+      }>(`/patients/${patientId}/studies`);
+      
+      return {
+        studies: response.studies || [],
+        total_studies: response.total_studies || 0,
+        patient_name: response.patient_name
+      };
+    } catch (error) {
+      console.error('Failed to fetch patient studies:', error);
+      return {
+        studies: [],
+        total_studies: 0
+      };
+    }
+  }
 }
 
 export const patientService = new PatientService();

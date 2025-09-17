@@ -78,12 +78,12 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
           });
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`❌ Upload failed for ${file.name}:`, error);
         results.push({
           filename: file.name,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: error instanceof Error ? error.message : 'Upload failed',
           file_size: file.size
         });
       }

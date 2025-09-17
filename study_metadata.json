@@ -80,5 +80,26 @@
       "metadata": "uploads\\PAT002\\TEST12_metadata.json"
     },
     "processing_status": "completed"
+  },
+  "1.2.840.113619.2.5.ec79ba98659b4af2c17c6197aef817ba": {
+    "study_uid": "1.2.840.113619.2.5.ec79ba98659b4af2c17c6197aef817ba",
+    "patient_id": "PAT001",
+    "patient_name": "Patient PAT001",
+    "study_date": "2025-09-17",
+    "study_time": "15:32:13",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - 0002.DCM",
+    "status": "received",
+    "original_filename": "0002.DCM",
+    "file_size": 1702398,
+    "dicom_url": "/uploads/PAT001/0002.DCM",
+    "created_at": "2025-09-17T15:32:13.920602",
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.ec79ba98659b4af2c17c6197aef817ba_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT001/0002.DCM"
+      }
+    ]
   }
 }

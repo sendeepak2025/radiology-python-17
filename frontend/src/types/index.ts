@@ -18,10 +18,13 @@ export interface Study {
   created_at: string;
   dicom_files?: string;
   filename?: string;
+  original_filename?: string;
   dicom_content_urls?: string;
   updated_at?: string;
   image_urls?: string[];
   thumbnail_url?: string;
+  preview_url?: string;
+  file_size?: number;
   reports?: ReportSummary[];
   report_count?: number;
   latest_report_status?: string;
@@ -29,6 +32,9 @@ export interface Study {
   dicom_url?: string;
   study_statistics?: StudyStatistics;
   processing_info?: ProcessingInfo;
+  processed_images?: Record<string, string>;
+  processing_status?: string;
+  dicom_metadata?: Record<string, any>;
 }
 
 export type StudyStatus = 'received' | 'processing' | 'completed' | 'billed' | 'error';
@@ -112,6 +118,24 @@ export interface PatientInfo {
   gender: string;
   address?: string;
   insurance?: Record<string, any>;
+}
+
+export interface Patient {
+  patient_id: string;
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string;
+  date_of_birth?: string;
+  gender?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  medical_record_number?: string;
+  active?: boolean;
+  created_at?: string;
 }
 
 export interface ServiceLine {

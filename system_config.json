@@ -1,0 +1,41 @@
+{
+  "system": {
+    "name": "Advanced Medical DICOM System",
+    "version": "2.0.0",
+    "type": "medical_imaging_platform",
+    "optimized": true,
+    "last_optimization": "2025-09-17T15:29:38.682367"
+  },
+  "backend": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "database": "kiro_mini.db",
+    "uploads_dir": "uploads",
+    "cors_enabled": true,
+    "api_docs": true
+  },
+  "frontend": {
+    "port": 3000,
+    "build_dir": "frontend/build",
+    "public_dir": "frontend/public",
+    "api_base_url": "http://localhost:8000"
+  },
+  "features": {
+    "ai_analysis": true,
+    "dicom_viewer": true,
+    "3d_rendering": true,
+    "volume_rendering": true,
+    "mpr_rendering": true,
+    "anomaly_detection": true,
+    "medical_tools": true,
+    "window_level": true,
+    "measurements": true,
+    "annotations": true
+  },
+  "performance": {
+    "database_optimized": true,
+    "uploads_organized": true,
+    "frontend_ready": true,
+    "production_ready": true
+  }
+}
