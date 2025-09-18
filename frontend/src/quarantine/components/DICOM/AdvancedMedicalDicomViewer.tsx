@@ -1,35 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     Box, Typography, Paper, IconButton, Tooltip, Slider,
-    Card, CardContent, Grid, Chip, Button, Dialog,
-    DialogTitle, DialogContent, DialogActions, Table,
-    TableBody, TableCell, TableContainer, TableHead, TableRow,
-    AppBar, Toolbar, Divider, Switch, FormControlLabel,
-    Alert, LinearProgress, Tabs, Tab, Badge, ButtonGroup,
-    Menu, MenuItem, ListItemIcon, ListItemText, Fab,
-    SpeedDial, SpeedDialAction, SpeedDialIcon, Accordion,
-    AccordionSummary, AccordionDetails, TextField, Select,
-    FormControl, InputLabel, Checkbox, RadioGroup, Radio,
-    FormLabel, Stack, ToggleButton, ToggleButtonGroup,
-    Drawer, useMediaQuery, useTheme, Collapse
+    Grid, Chip, Button, AppBar, Toolbar, Switch, FormControlLabel,
+    Alert, LinearProgress, Tabs, Tab, Badge, Menu, MenuItem,
+    ListItemText, SpeedDial, SpeedDialAction, SpeedDialIcon, Accordion,
+    AccordionSummary, AccordionDetails, Stack, ToggleButton,
+    ToggleButtonGroup, Drawer, useMediaQuery, useTheme
 } from '@mui/material';
 import {
     ZoomIn, ZoomOut, RotateLeft, RotateRight, CenterFocusStrong,
-    Brightness6, Contrast, Info, Download, Fullscreen,
-    RestartAlt, Visibility, Close, ViewInAr, Timeline,
-    BugReport, Analytics, Healing, Warning, CheckCircle,
-    Speed, Tune, PhotoFilter, Straighten, AspectRatio,
-    PlayArrow, Pause, SkipNext, SkipPrevious, Stop,
-    VolumeUp, Crop, ColorLens, GridOn,
-    RoomPreferences, ThreeDRotation, ViewModule,
-    CameraAlt, VideoCall, Mic, MicOff, RecordVoiceOver,
-    ExpandMore, Settings, Save, Print, Share,
-    PanTool, OpenWith, MyLocation, GpsFixed,
-    Timeline as TimelineIcon, BarChart, ShowChart,
-    ScatterPlot, BubbleChart, DonutSmall, PieChart,
-    Assessment, TrendingUp, Insights, AutoGraph,
-    Functions, Calculate, Rule, Architecture,
-    Menu as MenuIcon, ChevronLeft, ChevronRight
+    Fullscreen, RestartAlt, Close, ViewInAr, ViewModule,
+    BugReport, Analytics, Warning, Speed, Tune, PhotoFilter,
+    Straighten, AspectRatio, PlayArrow, Pause, SkipNext,
+    SkipPrevious, DonutSmall, PanTool, MyLocation, GpsFixed,
+    Timeline as TimelineIcon, ExpandMore, Menu as MenuIcon
 } from '@mui/icons-material';
 import type { Study } from '../../types';
 
@@ -103,7 +87,8 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [imageLoaded, setImageLoaded] = useState(false);
-    const [currentImage, setCurrentImage] = useState<HTMLImageElement | null>(null);
+    const currentImageRef = useRef<HTMLImageElement | null>(null);
+    const imageLoadTokenRef = useRef(0);
 
     // Viewer states
     const [viewerMode, setViewerMode] = useState<ViewerMode['mode']>('2D');
@@ -131,7 +116,8 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
     const [autoScroll, setAutoScroll] = useState(false);
     const [scrollSpeed, setScrollSpeed] = useState(2);
     const [currentSlice, setCurrentSlice] = useState(0);
-    const [totalSlices] = useState(50); // Mock data
+    const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([]);
+    const [totalSlices, setTotalSlices] = useState(1);
     const [isPlaying, setIsPlaying] = useState(false);
 
     // Medical tools and analysis
@@ -149,7 +135,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
     const viewerModes: ViewerMode[] = [
         { mode: '2D', label: '2D View', icon: <AspectRatio />, description: 'Standard 2D medical imaging' },
         { mode: '3D', label: '3D Volume', icon: <ViewInAr />, description: '3D volume rendering' },
-        { mode: 'MPR', label: 'MPR', icon: <Timeline />, description: 'Multi-planar reconstruction' },
+        { mode: 'MPR', label: 'MPR', icon: <TimelineIcon />, description: 'Multi-planar reconstruction' },
         { mode: 'Volume', label: 'Volume Render', icon: <PhotoFilter />, description: 'Volume rendering' },
         { mode: 'Cine', label: 'Cine Loop', icon: <PlayArrow />, description: 'Cine loop playback' },
         { mode: 'Fusion', label: 'Fusion', icon: <ViewModule />, description: 'Image fusion' }
@@ -161,7 +147,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
         { id: 'roi', name: 'ROI', icon: <CenterFocusStrong />, active: false, description: 'Region of interest', category: 'measurement' },
         { id: 'ellipse', name: 'Ellipse', icon: <DonutSmall />, active: false, description: 'Elliptical ROI', category: 'measurement' },
         { id: 'annotation', name: 'Annotate', icon: <BugReport />, active: false, description: 'Add annotations', category: 'annotation' },
-        { id: 'arrow', name: 'Arrow', icon: <Timeline />, active: false, description: 'Arrow pointer', category: 'annotation' },
+        { id: 'arrow', name: 'Arrow', icon: <TimelineIcon />, active: false, description: 'Arrow pointer', category: 'annotation' },
         { id: 'magnify', name: 'Magnify', icon: <ZoomIn />, active: false, description: 'Magnifying glass', category: 'analysis' },
         { id: 'probe', name: 'Probe', icon: <MyLocation />, active: false, description: 'Pixel probe', category: 'analysis' },
         { id: 'crosshair', name: 'Crosshair', icon: <GpsFixed />, active: false, description: 'Crosshair reference', category: 'navigation' },
@@ -179,7 +165,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
 
     // Auto-scroll functionality
     useEffect(() => {
-        if (autoScroll && isPlaying) {
+        if (autoScroll && isPlaying && totalSlices > 1) {
             const interval = setInterval(() => {
                 setCurrentSlice(prev => (prev + 1) % totalSlices);
             }, 1000 / scrollSpeed);
@@ -188,6 +174,111 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
     }, [autoScroll, isPlaying, scrollSpeed, totalSlices]);
 
     // Load DICOM image
+    // URL building utility
+    const buildUrl = (src: string) => {
+        if (/^https?:\/\//i.test(src)) return src;
+        if (src.startsWith('//')) return `${window.location.protocol}${src}`;
+        return `http://localhost:8000${src.startsWith('/') ? '' : '/'}${src}`;
+    };
+
+    // DPR-aware canvas sizing utility
+    const setCanvasSizeToContainer = (canvas: HTMLCanvasElement, container: HTMLElement) => {
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = container.clientWidth;
+        const cssH = container.clientHeight;
+        canvas.width = Math.round(cssW * dpr);
+        canvas.height = Math.round(cssH * dpr);
+        canvas.style.width = `${cssW}px`;
+        canvas.style.height = `${cssH}px`;
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const tryLoadMedicalImage = (url: string): Promise<boolean> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const token = ++imageLoadTokenRef.current;
+
+            img.onload = () => {
+                if (token !== imageLoadTokenRef.current) return resolve(false); // stale
+                console.log('✅ Medical image loaded successfully');
+                currentImageRef.current = img;
+                drawMedicalImageToCanvas(img);
+                setImageLoaded(true);
+                setLoading(false);
+                resolve(true);
+            };
+
+            img.onerror = () => {
+                if (token !== imageLoadTokenRef.current) return resolve(false); // stale
+                console.log('❌ Failed to load medical image');
+                resolve(false);
+            };
+
+            img.src = url;
+        });
+    };
+
+    const drawMedicalImageToCanvas = useCallback((img: HTMLImageElement) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Set DPR-aware canvas size to container
+        const container = containerRef.current;
+        if (container) {
+            setCanvasSizeToContainer(canvas, container);
+        }
+
+        // Clear with medical black background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Calculate image dimensions with proper aspect ratio
+        const canvasAspect = canvas.width / canvas.height;
+        const imageAspect = img.width / img.height;
+
+        let drawWidth, drawHeight;
+        if (imageAspect > canvasAspect) {
+            drawWidth = canvas.width * zoom;
+            drawHeight = (canvas.width / imageAspect) * zoom;
+        } else {
+            drawHeight = canvas.height * zoom;
+            drawWidth = (canvas.height * imageAspect) * zoom;
+        }
+
+        // Calculate bounding box for rotation to prevent clipping
+        const rad = (rotation * Math.PI) / 180;
+        const sin = Math.abs(Math.sin(rad));
+        const cos = Math.abs(Math.cos(rad));
+
+        // Apply medical imaging transformations
+        ctx.save();
+        ctx.translate(canvas.width / 2 + pan.x, canvas.height / 2 + pan.y);
+        ctx.rotate(rad);
+
+        // Apply medical imaging filters
+        let filterString = `brightness(${brightness}%) contrast(${contrast}%)`;
+        if (invert) {
+            filterString += ' invert(1)';
+        }
+        ctx.filter = filterString;
+
+        // Draw medical image (centered and properly sized for rotation)
+        ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+
+        // Draw medical overlays
+        drawMedicalOverlays(ctx);
+        drawGrid(ctx);
+        drawDetections(ctx);
+        drawMeasurements(ctx);
+        drawAnnotations(ctx);
+    }, [zoom, rotation, pan, brightness, contrast, invert, showGrid, windowLevel, windowWidth, currentSlice, detections, measurements, annotations]);
+
     const loadAdvancedDicomImage = useCallback(async () => {
         try {
             setLoading(true);
@@ -238,20 +329,38 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                 return;
             }
 
-            // Try loading images in order of preference
+            // Try loading all available images for multi-slice support
+            const loadedImagesList: HTMLImageElement[] = [];
+
             for (const source of imageSources) {
-                const imageUrl = source.startsWith('http') ? source : `http://localhost:8000${source}`;
+                const imageUrl = buildUrl(source);
                 console.log('🔍 Attempting to load:', imageUrl);
 
                 const success = await tryLoadMedicalImage(imageUrl);
-                if (success) {
+                if (success && currentImageRef.current) {
                     console.log('✅ Successfully loaded image from:', imageUrl);
-                    // Run auto-detection after image loads
-                    if (autoDetectionEnabled) {
-                        setTimeout(() => runAutoDetection(), 1000);
+                    loadedImagesList.push(currentImageRef.current);
+
+                    // Set the first successful image as the current display
+                    if (loadedImagesList.length === 1) {
+                        drawMedicalImageToCanvas(currentImageRef.current);
+                        setImageLoaded(true);
+                        setLoading(false);
+
+                        // Run auto-detection after first image loads
+                        if (autoDetectionEnabled) {
+                            setTimeout(() => runAutoDetection(), 1000);
+                        }
                     }
-                    return;
                 }
+            }
+
+            // Update loaded images and total slices
+            if (loadedImagesList.length > 0) {
+                setLoadedImages(loadedImagesList);
+                setTotalSlices(loadedImagesList.length);
+                console.log(`✅ Loaded ${loadedImagesList.length} images for multi-slice viewing`);
+                return;
             }
 
             console.log('❌ Failed to load any image, showing info screen');
@@ -268,31 +377,10 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
         }
     }, [study, autoDetectionEnabled, onError]);
 
-    const tryLoadMedicalImage = (url: string): Promise<boolean> => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
+    // Duplicate function declarations removed - using the ones defined earlier
 
-            img.onload = () => {
-                console.log('✅ Medical image loaded successfully');
-                setCurrentImage(img);
-                drawMedicalImageToCanvas(img);
-                setImageLoaded(true);
-                setLoading(false);
-                resolve(true);
-            };
-
-            img.onerror = () => {
-                console.log('❌ Failed to load medical image');
-                resolve(false);
-            };
-
-            img.src = url;
-        });
-    };
-
-    const runAutoDetection = async () => {
-        if (!currentImage) {
+    const runAutoDetection = useCallback(async () => {
+        if (!currentImageRef.current) {
             console.log('❌ No image loaded for analysis');
             return;
         }
@@ -305,10 +393,10 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            if (ctx && currentImage) {
-                canvas.width = currentImage.width;
-                canvas.height = currentImage.height;
-                ctx.drawImage(currentImage, 0, 0);
+            if (ctx && currentImageRef.current) {
+                canvas.width = currentImageRef.current.width;
+                canvas.height = currentImageRef.current.height;
+                ctx.drawImage(currentImageRef.current, 0, 0);
 
                 // Get image data for analysis
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -344,8 +432,8 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                         id: '2',
                         type: 'anatomy',
                         confidence: 0.82,
-                        description: `Anatomical structure detected - Image dimensions: ${currentImage.width}x${currentImage.height}`,
-                        location: { x: currentImage.width / 2, y: currentImage.height / 2, width: 100, height: 80 },
+                        description: `Anatomical structure detected - Image dimensions: ${currentImageRef.current.width}x${currentImageRef.current.height}`,
+                        location: { x: currentImageRef.current.width / 2, y: currentImageRef.current.height / 2, width: 100, height: 80 },
                         severity: 'low',
                         timestamp: Date.now(),
                         verified: false
@@ -359,7 +447,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                         type: 'anomaly',
                         confidence: Math.min(0.85, contrast + 0.2),
                         description: `High contrast region detected - May indicate pathological changes`,
-                        location: { x: Math.round(currentImage.width * 0.3), y: Math.round(currentImage.height * 0.4), width: 60, height: 60 },
+                        location: { x: Math.round(currentImageRef.current.width * 0.3), y: Math.round(currentImageRef.current.height * 0.4), width: 60, height: 60 },
                         severity: contrast > 0.5 ? 'high' : 'medium',
                         timestamp: Date.now(),
                         verified: false
@@ -373,7 +461,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                         type: 'measurement',
                         confidence: 0.78,
                         description: `High density area - Average HU: ${Math.round((avgBrightness - 128) * 4)}`,
-                        location: { x: Math.round(currentImage.width * 0.7), y: Math.round(currentImage.height * 0.3), width: 40, height: 40 },
+                        location: { x: Math.round(currentImageRef.current.width * 0.7), y: Math.round(currentImageRef.current.height * 0.3), width: 40, height: 40 },
                         severity: 'medium',
                         timestamp: Date.now(),
                         verified: false
@@ -386,62 +474,9 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
 
             setAnalysisRunning(false);
         }, 2000);
-    };
+    }, [currentImageRef, brightness, contrast, setDetections, setAnalysisRunning]);
 
-    const drawMedicalImageToCanvas = (img: HTMLImageElement) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // Set canvas size to container
-        const container = containerRef.current;
-        if (container) {
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-        }
-
-        // Clear with medical black background
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Calculate image dimensions
-        const canvasAspect = canvas.width / canvas.height;
-        const imageAspect = img.width / img.height;
-
-        let drawWidth, drawHeight;
-        if (imageAspect > canvasAspect) {
-            drawWidth = canvas.width * zoom;
-            drawHeight = (canvas.width / imageAspect) * zoom;
-        } else {
-            drawHeight = canvas.height * zoom;
-            drawWidth = (canvas.height * imageAspect) * zoom;
-        }
-
-        // Apply medical imaging transformations
-        ctx.save();
-        ctx.translate(canvas.width / 2 + pan.x, canvas.height / 2 + pan.y);
-        ctx.rotate((rotation * Math.PI) / 180);
-
-        // Apply medical imaging filters
-        let filterString = `brightness(${brightness}%) contrast(${contrast}%)`;
-        if (invert) {
-            filterString += ' invert(1)';
-        }
-        ctx.filter = filterString;
-
-        // Draw medical image
-        ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-        ctx.restore();
-
-        // Draw medical overlays
-        drawMedicalOverlays(ctx);
-        drawGrid(ctx);
-        drawDetections(ctx);
-        drawMeasurements(ctx);
-        drawAnnotations(ctx);
-    };
 
     const drawMedicalOverlays = (ctx: CanvasRenderingContext2D) => {
         const canvas = canvasRef.current;
@@ -675,11 +710,13 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
 
     // Event handlers
     const handleToolSelect = (toolId: string) => {
-        setActiveTool(activeTool === toolId ? 'none' : toolId);
+        console.log('🔧 Tool selected:', toolId);
+        setActiveTool(prev => prev === toolId ? 'none' : toolId);
         setToolsMenuAnchor(null);
     };
 
     const handlePresetSelect = (preset: typeof windowPresets[0]) => {
+        console.log('🎯 Medical preset selected:', preset.name);
         setWindowLevel(preset.level);
         setWindowWidth(preset.width);
         setPresetMenuAnchor(null);
@@ -700,6 +737,23 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
         setWindowLevel(50);
         setWindowWidth(100);
         setInvert(false);
+    };
+
+    // Safe download with CORS handling
+    const handleDownload = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        try {
+            const data = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = data;
+            link.download = `${study.original_filename || 'dicom'}.png`;
+            link.click();
+        } catch (err) {
+            console.error('Download failed (possible CORS):', err);
+            setError('Cannot download image due to cross-origin restrictions. Enable CORS on image host.');
+        }
     };
 
     // Debug function to check available files
@@ -732,10 +786,75 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
     }, [checkAvailableFiles, loadAdvancedDicomImage]);
 
     useEffect(() => {
-        if (currentImage) {
-            drawMedicalImageToCanvas(currentImage);
+        if (currentImageRef.current) {
+            drawMedicalImageToCanvas(currentImageRef.current);
         }
-    }, [currentImage, zoom, rotation, pan, brightness, contrast, windowLevel, windowWidth, invert, showGrid, currentSlice, detections, measurements, annotations]);
+    }, [drawMedicalImageToCanvas]);
+
+    // Handle slice changes - switch to different loaded image
+    useEffect(() => {
+        if (loadedImages.length > 0 && currentSlice < loadedImages.length) {
+            const imageForSlice = loadedImages[currentSlice];
+            currentImageRef.current = imageForSlice;
+            drawMedicalImageToCanvas(imageForSlice);
+        }
+    }, [currentSlice, loadedImages]);
+
+    // Pointer pan handlers
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        let dragging = false;
+        let start = { x: 0, y: 0 };
+
+        const onPointerDown = (e: PointerEvent) => {
+            dragging = true;
+            start = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+            (e.target as Element).setPointerCapture(e.pointerId);
+        };
+
+        let raf = 0;
+        const onPointerMove = (e: PointerEvent) => {
+            if (!dragging) return;
+            const newPan = { x: e.clientX - start.x, y: e.clientY - start.y };
+            if (raf) cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => setPan(newPan));
+        };
+
+        const onPointerUp = () => {
+            dragging = false;
+        };
+
+        canvas.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+
+        return () => {
+            canvas.removeEventListener('pointerdown', onPointerDown);
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+        };
+    }, [pan]);
+
+    // Animation loop for pulsing detections
+    useEffect(() => {
+        const loop = () => {
+            if (currentImageRef.current) {
+                drawMedicalImageToCanvas(currentImageRef.current);
+            }
+            animationRef.current = requestAnimationFrame(loop);
+        };
+
+        // Start only if there are detections that need animation
+        if (detections.some(d => d.severity === 'critical' || d.severity === 'high')) {
+            animationRef.current = requestAnimationFrame(loop);
+        }
+
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [detections, zoom, rotation, pan, brightness, contrast, showGrid]);
 
     // Render tab content function
     const renderTabContent = () => {
@@ -817,7 +936,10 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                         />
                                     </Box>
                                     <Button
-                                        onClick={(e) => setPresetMenuAnchor(e.currentTarget)}
+                                        onClick={(e) => {
+                                            console.log('🏥 Medical Presets button clicked');
+                                            setPresetMenuAnchor(e.currentTarget);
+                                        }}
                                         variant="outlined"
                                         size={isMobile ? "medium" : "small"}
                                         fullWidth={isMobile}
@@ -981,45 +1103,46 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                     </Typography>
 
                     {/* Responsive Viewer Mode Selector */}
-                    {!isMobile && (
-                        <ToggleButtonGroup
-                            value={viewerMode}
-                            exclusive
-                            onChange={(_, newMode) => newMode && setViewerMode(newMode)}
-                            size={isTablet ? "small" : "medium"}
-                            sx={{
-                                mr: { sm: 1, md: 2 },
-                                '& .MuiToggleButton-root': {
-                                    px: { sm: 1, md: 2 },
-                                    py: { sm: 0.5, md: 1 }
-                                }
-                            }}
-                        >
-                            {viewerModes.map((mode) => (
-                                <ToggleButton key={mode.mode} value={mode.mode} sx={{ color: '#00ff00' }}>
-                                    <Tooltip title={mode.description}>
-                                        <Box sx={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: { sm: 0.25, md: 0.5 },
-                                            flexDirection: { sm: 'column', md: 'row' }
-                                        }}>
-                                            {mode.icon}
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    display: { xs: 'none', sm: 'block' },
-                                                    fontSize: { sm: '0.6rem', md: '0.75rem' }
-                                                }}
-                                            >
-                                                {mode.label}
-                                            </Typography>
-                                        </Box>
-                                    </Tooltip>
-                                </ToggleButton>
-                            ))}
-                        </ToggleButtonGroup>
-                    )}
+                    <ToggleButtonGroup
+                        value={viewerMode}
+                        exclusive
+                        onChange={(_, newMode) => {
+                            console.log('📺 Viewer mode changed to:', newMode);
+                            newMode && setViewerMode(newMode);
+                        }}
+                        size={isTablet ? "small" : "medium"}
+                        sx={{
+                            mr: { sm: 1, md: 2 },
+                            '& .MuiToggleButton-root': {
+                                px: { sm: 1, md: 2 },
+                                py: { sm: 0.5, md: 1 }
+                            }
+                        }}
+                    >
+                        {viewerModes.map((mode) => (
+                            <ToggleButton key={mode.mode} value={mode.mode} sx={{ color: '#00ff00' }}>
+                                <Tooltip title={mode.description}>
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: { sm: 0.25, md: 0.5 },
+                                        flexDirection: { sm: 'column', md: 'row' }
+                                    }}>
+                                        {mode.icon}
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                display: { xs: 'none', sm: 'block' },
+                                                fontSize: { sm: '0.6rem', md: '0.75rem' }
+                                            }}
+                                        >
+                                            {mode.label}
+                                        </Typography>
+                                    </Box>
+                                </Tooltip>
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
 
                     {/* Responsive Status Indicators */}
                     <Stack
@@ -1084,6 +1207,46 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                 >
                     <canvas
                         ref={canvasRef}
+                        tabIndex={0}
+                        role="img"
+                        aria-label={`DICOM image ${study.original_filename || ''}`}
+                        onWheel={(e) => {
+                            e.preventDefault();
+                            if (e.deltaY < 0) {
+                                setZoom(prev => Math.min(prev * 1.2, 10));
+                            } else {
+                                setZoom(prev => Math.max(prev / 1.2, 0.1));
+                            }
+                        }}
+                        onKeyDown={(e) => {
+                            switch (e.key) {
+                                case 'ArrowLeft':
+                                    e.preventDefault();
+                                    setCurrentSlice(prev => Math.max(0, prev - 1));
+                                    break;
+                                case 'ArrowRight':
+                                    e.preventDefault();
+                                    setCurrentSlice(prev => Math.min(totalSlices - 1, prev + 1));
+                                    break;
+                                case '+':
+                                case '=':
+                                    e.preventDefault();
+                                    setZoom(prev => Math.min(prev * 1.2, 10));
+                                    break;
+                                case '-':
+                                    e.preventDefault();
+                                    setZoom(prev => Math.max(prev / 1.2, 0.1));
+                                    break;
+                                case ' ':
+                                    e.preventDefault();
+                                    setIsPlaying(prev => !prev);
+                                    break;
+                                case 'r':
+                                    e.preventDefault();
+                                    resetView();
+                                    break;
+                            }
+                        }}
                         style={{
                             width: '100%',
                             height: '100%',
@@ -1102,6 +1265,8 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                         gap: { xs: 0.5, sm: 1 },
                         zIndex: 10
                     }}>
+
+
                         {/* Quick Tools */}
                         <Paper sx={{
                             p: { xs: 0.5, sm: 1 },
@@ -1116,7 +1281,10 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                 <Tooltip title="Zoom In">
                                     <IconButton
                                         size={isMobile ? "small" : "medium"}
-                                        onClick={() => setZoom(prev => Math.min(prev * 1.2, 10))}
+                                        onClick={() => {
+                                            console.log('🔍 Zoom In clicked');
+                                            setZoom(prev => Math.min(prev * 1.2, 10));
+                                        }}
                                         sx={{
                                             color: '#00ff00',
                                             minWidth: { xs: '2rem', sm: '2.5rem' },
@@ -1129,7 +1297,10 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                 <Tooltip title="Zoom Out">
                                     <IconButton
                                         size={isMobile ? "small" : "medium"}
-                                        onClick={() => setZoom(prev => Math.max(prev / 1.2, 0.1))}
+                                        onClick={() => {
+                                            console.log('🔍 Zoom Out clicked');
+                                            setZoom(prev => Math.max(prev / 1.2, 0.1));
+                                        }}
                                         sx={{
                                             color: '#00ff00',
                                             minWidth: { xs: '2rem', sm: '2.5rem' },
@@ -1155,7 +1326,21 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                 <Tooltip title="Fullscreen">
                                     <IconButton
                                         size={isMobile ? "small" : "medium"}
-                                        onClick={() => setFullscreen(!fullscreen)}
+                                        onClick={async () => {
+                                            const el = containerRef.current;
+                                            if (!el) return;
+                                            if (!document.fullscreenElement) {
+                                                try {
+                                                    await el.requestFullscreen();
+                                                    setFullscreen(true);
+                                                } catch (e) {
+                                                    console.error('Fullscreen failed:', e);
+                                                }
+                                            } else {
+                                                await document.exitFullscreen();
+                                                setFullscreen(false);
+                                            }
+                                        }}
                                         sx={{
                                             color: '#00ff00',
                                             minWidth: { xs: '2rem', sm: '2.5rem' },
@@ -1184,6 +1369,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                     <IconButton
                                         size={isMobile ? "small" : "medium"}
                                         onClick={() => setCurrentSlice(prev => Math.max(0, prev - 1))}
+                                        disabled={currentSlice === 0}
                                         sx={{
                                             color: '#00ff00',
                                             minWidth: { xs: '2rem', sm: '2.5rem' },
@@ -1209,6 +1395,7 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                     <IconButton
                                         size={isMobile ? "small" : "medium"}
                                         onClick={() => setCurrentSlice(prev => Math.min(totalSlices - 1, prev + 1))}
+                                        disabled={currentSlice === totalSlices - 1}
                                         sx={{
                                             color: '#00ff00',
                                             minWidth: { xs: '2rem', sm: '2.5rem' },
@@ -1217,17 +1404,44 @@ const AdvancedMedicalDicomViewer: React.FC<AdvancedMedicalDicomViewerProps> = ({
                                     >
                                         <SkipNext sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />
                                     </IconButton>
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            color: '#00ff00',
-                                            minWidth: { xs: '3rem', sm: '4rem' },
-                                            fontSize: { xs: '0.6rem', sm: '0.75rem' },
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        {currentSlice + 1}/{totalSlices}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '120px' }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#00ff00',
+                                                fontSize: { xs: '0.6rem', sm: '0.75rem' },
+                                                textAlign: 'center',
+                                                mb: 0.5
+                                            }}
+                                        >
+                                            Slice {currentSlice + 1}/{totalSlices}
+                                        </Typography>
+                                        {totalSlices > 1 && (
+                                            <Slider
+                                                value={currentSlice}
+                                                min={0}
+                                                max={totalSlices - 1}
+                                                step={1}
+                                                onChange={(_, value) => setCurrentSlice(value as number)}
+                                                sx={{
+                                                    width: '100px',
+                                                    height: 4,
+                                                    color: '#00ff00',
+                                                    '& .MuiSlider-thumb': {
+                                                        width: 12,
+                                                        height: 12,
+                                                        backgroundColor: '#00ff00',
+                                                    },
+                                                    '& .MuiSlider-track': {
+                                                        backgroundColor: '#00ff00',
+                                                    },
+                                                    '& .MuiSlider-rail': {
+                                                        backgroundColor: 'rgba(0, 255, 0, 0.3)',
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    </Box>
                                 </Stack>
                             </Paper>
                         )}

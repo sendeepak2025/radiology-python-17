@@ -3,8 +3,10 @@ Final working backend - handles all frontend requests with proper DICOM handling
 """
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +30,10 @@ app.add_middleware(
 # Create directories
 uploads_dir = Path("uploads")
 uploads_dir.mkdir(exist_ok=True)
+
+# Mount static files for uploads directory
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+print("✅ Static file serving enabled for /uploads directory")
 
 # Metadata storage for studies
 metadata_file = Path("study_metadata.json")
@@ -369,71 +375,111 @@ def get_study(study_uid: str):
         return {"error": str(e)}
 
 @app.post("/patients/{patient_id}/upload/dicom")
-def upload_dicom(patient_id: str, files: UploadFile = File(...)):
-    """Upload DICOM files with advanced processing"""
+def upload_dicom(patient_id: str, files: List[UploadFile] = File(...)):
+    """Upload multiple DICOM files as a series with advanced processing"""
     try:
         # Create patient directory in uploads
         patient_dir = uploads_dir / patient_id
         patient_dir.mkdir(exist_ok=True)
         
-        # Save file
-        file_path = patient_dir / files.filename
+        # Handle both single file and multiple files
+        if not isinstance(files, list):
+            files = [files]
         
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(files.file, buffer)
-        
-        file_size = file_path.stat().st_size
+        # Generate series UID for multiple files
+        series_uid = generate_study_uid(patient_id, f"series_{len(files)}_files")
         created_time = datetime.now()
         
-        # Generate study UID
-        study_uid = generate_study_uid(patient_id, files.filename)
+        uploaded_files = []
+        total_size = 0
+        processing_results = []
         
-        # Process DICOM file with advanced processor
-        processing_result = process_dicom_with_advanced_libraries(file_path)
+        # Process each file
+        for i, file in enumerate(files):
+            # Save file with series numbering
+            file_path = patient_dir / f"{series_uid}_slice_{i+1:03d}_{file.filename}"
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            file_size = file_path.stat().st_size
+            total_size += file_size
+            
+            # Process individual DICOM file
+            processing_result = process_dicom_with_advanced_libraries(file_path)
+            processing_results.append({
+                "slice_number": i + 1,
+                "filename": file.filename,
+                "file_path": str(file_path),
+                "file_size": file_size,
+                "processing": processing_result
+            })
+            
+            uploaded_files.append({
+                "original_filename": file.filename,
+                "stored_filename": file_path.name,
+                "file_path": str(file_path),
+                "file_size": file_size,
+                "slice_number": i + 1
+            })
         
-        # Create study metadata
+        # Create comprehensive processing result
+        series_processing_result = {
+            "success": True,
+            "series_uid": series_uid,
+            "total_slices": len(files),
+            "total_size": total_size,
+            "individual_results": processing_results,
+            "series_metadata": {
+                "patient_id": patient_id,
+                "upload_time": created_time.isoformat(),
+                "slice_count": len(files),
+                "series_description": f"DICOM Series - {len(files)} slices"
+            }
+        }
+        
+        # Create study metadata for series
+        image_urls = []
+        images = []
+        
+        for i, file_info in enumerate(uploaded_files):
+            image_urls.append(f"wadouri:http://localhost:8000/uploads/{patient_id}/{file_info['stored_filename']}")
+            images.append({
+                "image_uid": f"{series_uid}_image_{i+1}",
+                "image_number": i + 1,
+                "slice_number": i + 1,
+                "image_url": f"/uploads/{patient_id}/{file_info['stored_filename']}",
+                "original_filename": file_info['original_filename'],
+                "file_size": file_info['file_size']
+            })
+        
         study_data = {
-            "study_uid": study_uid,
+            "study_uid": series_uid,
             "patient_id": patient_id,
             "patient_name": f"Patient {patient_id}",
             "study_date": created_time.strftime("%Y-%m-%d"),
             "study_time": created_time.strftime("%H:%M:%S"),
             "modality": "CT",
-            "study_description": f"Uploaded DICOM - {files.filename}",
+            "study_description": f"DICOM Series - {len(files)} slices",
             "status": "received",
-            "original_filename": files.filename,
-            "file_size": file_size,
-            "dicom_url": f"/uploads/{patient_id}/{files.filename}",
+            "series_info": {
+                "total_slices": len(files),
+                "total_size": total_size,
+                "uploaded_files": len(files)
+            },
+            "file_size": total_size,
+            "dicom_url": f"/uploads/{patient_id}/",
             "created_at": created_time.isoformat(),
-            "image_urls": [
-                f"wadouri:http://localhost:8000/uploads/{patient_id}/{files.filename}"
-            ],
-            "images": [
-                {
-                    "image_uid": f"{study_uid}_image_1",
-                    "image_number": 1,
-                    "image_url": f"/uploads/{patient_id}/{files.filename}"
-                }
-            ]
+            "image_urls": image_urls,
+            "images": images,
+            "slice_count": len(files)
         }
         
-        # Add processing results if successful
-        if processing_result and processing_result.get('success'):
-            study_data.update({
-                "dicom_metadata": processing_result.get('metadata', {}),
-                "processed_images": processing_result.get('processed_files', {}),
-                "processing_status": "completed"
-            })
-            
-            # Add preview URLs
-            processed_files = processing_result.get('processed_files', {})
-            if 'preview' in processed_files:
-                study_data["preview_url"] = f"/{processed_files['preview']}"
-            if 'thumbnail' in processed_files:
-                study_data["thumbnail_url"] = f"/{processed_files['thumbnail']}"
-        else:
-            study_data["processing_status"] = "failed"
-            study_data["processing_error"] = processing_result.get('error') if processing_result else "Unknown error"
+        # Add series processing results
+        study_data.update({
+            "processing_results": series_processing_result,
+            "processing_status": "completed" if series_processing_result.get('success') else "failed"
+        })
         
         # Save metadata
         metadata = load_metadata()
@@ -443,8 +489,10 @@ def upload_dicom(patient_id: str, files: UploadFile = File(...)):
         print(f"[DEBUG] Saved study with UID: {study_uid}")
         
         return {
-            "message": "File uploaded successfully",
-            "filename": files.filename,
+            "message": f"DICOM series uploaded successfully - {len(files)} files",
+            "series_uid": series_uid,
+            "total_files": len(files),
+            "total_slices": len(files),
             "file_size": file_size,
             "file_type": "dicom",
             "patient_id": patient_id,

@@ -17,6 +17,7 @@ import uuid
 import logging
 import shutil
 import mimetypes
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -658,6 +659,164 @@ async def debug_patient_count(db: Session = Depends(get_db)):
         }
     except Exception as e:
         return {"error": str(e)}
+
+# Report Models
+class ReportCreate(BaseModel):
+    study_uid: str
+    patient_id: str
+    exam_type: Optional[str] = None
+    ai_generated: bool = False
+
+class ReportUpdate(BaseModel):
+    findings: Optional[str] = None
+    impressions: Optional[str] = None
+    recommendations: Optional[str] = None
+    status: Optional[str] = None
+
+class ReportResponse(BaseModel):
+    id: str
+    report_id: str
+    study_uid: str
+    patient_id: str
+    status: str
+    findings: Optional[str] = None
+    impressions: Optional[str] = None
+    recommendations: Optional[str] = None
+    ai_generated: bool
+    ai_confidence: Optional[float] = None
+    created_at: str
+    updated_at: Optional[str] = None
+
+# Report endpoints
+@app.post("/api/reports", response_model=ReportResponse)
+async def create_report(report_data: ReportCreate, db: Session = Depends(get_db)):
+    """Create a new medical report"""
+    try:
+        logger.info(f"📋 Creating report for study {report_data.study_uid}")
+        
+        # Check if patient exists
+        patient = db.query(Patient).filter(
+            Patient.patient_id == report_data.patient_id,
+            Patient.active == True
+        ).first()
+        
+        if not patient:
+            raise HTTPException(status_code=404, detail=f"Patient {report_data.patient_id} not found")
+        
+        # Generate report ID
+        report_id = f"RPT_{report_data.patient_id}_{int(datetime.utcnow().timestamp())}"
+        
+        # Create report data
+        report = {
+            "id": str(uuid.uuid4()),
+            "report_id": report_id,
+            "study_uid": report_data.study_uid,
+            "patient_id": report_data.patient_id,
+            "status": "draft",
+            "ai_generated": report_data.ai_generated,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        # If AI generated, add some mock findings
+        if report_data.ai_generated:
+            report.update({
+                "findings": "AI Analysis: Image quality is adequate for diagnostic interpretation. No acute abnormalities detected.",
+                "impressions": "Normal study. No significant pathological findings identified.",
+                "recommendations": "Routine follow-up as clinically indicated.",
+                "ai_confidence": 0.85,
+                "status": "draft"
+            })
+        
+        # Save report to a simple JSON file (in production, use proper database)
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
+        
+        report_file = reports_dir / f"{report_id}.json"
+        with open(report_file, "w") as f:
+            json.dump(report, f, indent=2)
+        
+        logger.info(f"✅ Report created: {report_id}")
+        
+        return ReportResponse(**report)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error creating report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/reports/ai-generate", response_model=ReportResponse)
+async def generate_ai_report(request: dict, db: Session = Depends(get_db)):
+    """Generate AI-powered medical report"""
+    try:
+        study_uid = request.get("study_uid")
+        if not study_uid:
+            raise HTTPException(status_code=400, detail="study_uid is required")
+        
+        logger.info(f"🤖 Generating AI report for study {study_uid}")
+        
+        # Find patient from study (simplified - in production, query studies table)
+        # For now, extract patient ID from study context or use a default
+        patient_id = "PAT002"  # This should be extracted from study data
+        
+        # Create AI report
+        report_data = ReportCreate(
+            study_uid=study_uid,
+            patient_id=patient_id,
+            ai_generated=True
+        )
+        
+        return await create_report(report_data, db)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error generating AI report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/reports/{report_id}", response_model=ReportResponse)
+async def get_report(report_id: str):
+    """Get a specific report"""
+    try:
+        report_file = Path("reports") / f"{report_id}.json"
+        
+        if not report_file.exists():
+            raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
+        
+        with open(report_file, "r") as f:
+            report_data = json.load(f)
+        
+        return ReportResponse(**report_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/reports/study/{study_uid}")
+async def get_study_reports(study_uid: str):
+    """Get all reports for a study"""
+    try:
+        reports_dir = Path("reports")
+        if not reports_dir.exists():
+            return {"reports": []}
+        
+        reports = []
+        for report_file in reports_dir.glob("*.json"):
+            try:
+                with open(report_file, "r") as f:
+                    report_data = json.load(f)
+                    if report_data.get("study_uid") == study_uid:
+                        reports.append(report_data)
+            except:
+                continue
+        
+        return {"reports": reports}
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting study reports: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

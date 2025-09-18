@@ -200,7 +200,63 @@ class PatientService {
   // ===== FILE UPLOAD METHODS =====
 
   /**
-   * Upload a file for a patient
+   * Upload multiple DICOM files as a series for a patient
+   */
+  async uploadDicomSeries(patientId: string, files: File[], description?: string): Promise<any> {
+    try {
+      console.log(`📤 Uploading DICOM series for patient ${patientId}:`, files.length, 'files');
+      
+      const formData = new FormData();
+      
+      // Append all files with the same 'files' field name for series upload
+      files.forEach((file, index) => {
+        formData.append('files', file);
+        console.log(`📁 Added file ${index + 1}/${files.length}: ${file.name}`);
+      });
+      
+      if (description) {
+        formData.append('description', description);
+      }
+
+      const endpoint = `/patients/${patientId}/upload/dicom`;
+      console.log(`🏥 Uploading ${files.length} files as DICOM series`);
+
+      const response = await apiService.post(
+        endpoint,
+        formData,
+        {
+          timeout: 120000, // 2 minute timeout for multiple files
+        }
+      );
+
+      console.log('✅ Series upload successful:', response);
+      
+      return {
+        success: true,
+        message: response.message,
+        series_uid: response.series_uid,
+        total_files: response.total_files,
+        total_slices: response.total_slices,
+        study: response.study || response,
+        processing_results: response.processing_results
+      };
+
+    } catch (error: any) {
+      console.error('❌ Series upload failed:', error);
+      
+      let errorMessage = 'Series upload failed';
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Upload a single file for a patient
    */
   async uploadFile(patientId: string, file: File, description?: string): Promise<any> {
     try {
@@ -217,12 +273,12 @@ class PatientService {
       
       // Use consistent field naming based on endpoint
       if (isDicomFile) {
-        // DICOM endpoint expects 'files' field
+        // DICOM endpoint expects 'files' field (plural) - matches backend
         formData.append('files', file);
         endpoint = `/patients/${patientId}/upload/dicom`;
         console.log('🏥 Using DICOM upload endpoint for comprehensive processing');
       } else {
-        // Standard endpoint expects 'files' field (updated to match backend)
+        // Standard endpoint expects 'files' field (plural) - matches backend
         formData.append('files', file);
         endpoint = `/patients/${patientId}/upload`;
         console.log('📄 Using standard upload endpoint');

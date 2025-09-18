@@ -1,0 +1,487 @@
+{
+  "original_file": "uploads/PAT001/0002.DCM",
+  "total_frames": 96,
+  "processing_date": "2025-09-18T06:43:02.687236",
+  "frame_files": [
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_000_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_000_thumbnail.png",
+      "frame_index": 0
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_001_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_001_thumbnail.png",
+      "frame_index": 1
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_002_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_002_thumbnail.png",
+      "frame_index": 2
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_003_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_003_thumbnail.png",
+      "frame_index": 3
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_004_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_004_thumbnail.png",
+      "frame_index": 4
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_005_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_005_thumbnail.png",
+      "frame_index": 5
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_006_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_006_thumbnail.png",
+      "frame_index": 6
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_007_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_007_thumbnail.png",
+      "frame_index": 7
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_008_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_008_thumbnail.png",
+      "frame_index": 8
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_009_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_009_thumbnail.png",
+      "frame_index": 9
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_010_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_010_thumbnail.png",
+      "frame_index": 10
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_011_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_011_thumbnail.png",
+      "frame_index": 11
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_012_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_012_thumbnail.png",
+      "frame_index": 12
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_013_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_013_thumbnail.png",
+      "frame_index": 13
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_014_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_014_thumbnail.png",
+      "frame_index": 14
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_015_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_015_thumbnail.png",
+      "frame_index": 15
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_016_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_016_thumbnail.png",
+      "frame_index": 16
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_017_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_017_thumbnail.png",
+      "frame_index": 17
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_018_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_018_thumbnail.png",
+      "frame_index": 18
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_019_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_019_thumbnail.png",
+      "frame_index": 19
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_020_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_020_thumbnail.png",
+      "frame_index": 20
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_021_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_021_thumbnail.png",
+      "frame_index": 21
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_022_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_022_thumbnail.png",
+      "frame_index": 22
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_023_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_023_thumbnail.png",
+      "frame_index": 23
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_024_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_024_thumbnail.png",
+      "frame_index": 24
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_025_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_025_thumbnail.png",
+      "frame_index": 25
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_026_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_026_thumbnail.png",
+      "frame_index": 26
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_027_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_027_thumbnail.png",
+      "frame_index": 27
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_028_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_028_thumbnail.png",
+      "frame_index": 28
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_029_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_029_thumbnail.png",
+      "frame_index": 29
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_030_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_030_thumbnail.png",
+      "frame_index": 30
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_031_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_031_thumbnail.png",
+      "frame_index": 31
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_032_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_032_thumbnail.png",
+      "frame_index": 32
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_033_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_033_thumbnail.png",
+      "frame_index": 33
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_034_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_034_thumbnail.png",
+      "frame_index": 34
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_035_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_035_thumbnail.png",
+      "frame_index": 35
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_036_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_036_thumbnail.png",
+      "frame_index": 36
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_037_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_037_thumbnail.png",
+      "frame_index": 37
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_038_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_038_thumbnail.png",
+      "frame_index": 38
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_039_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_039_thumbnail.png",
+      "frame_index": 39
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_040_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_040_thumbnail.png",
+      "frame_index": 40
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_041_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_041_thumbnail.png",
+      "frame_index": 41
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_042_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_042_thumbnail.png",
+      "frame_index": 42
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_043_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_043_thumbnail.png",
+      "frame_index": 43
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_044_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_044_thumbnail.png",
+      "frame_index": 44
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_045_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_045_thumbnail.png",
+      "frame_index": 45
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_046_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_046_thumbnail.png",
+      "frame_index": 46
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_047_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_047_thumbnail.png",
+      "frame_index": 47
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_048_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_048_thumbnail.png",
+      "frame_index": 48
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_049_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_049_thumbnail.png",
+      "frame_index": 49
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_050_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_050_thumbnail.png",
+      "frame_index": 50
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_051_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_051_thumbnail.png",
+      "frame_index": 51
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_052_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_052_thumbnail.png",
+      "frame_index": 52
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_053_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_053_thumbnail.png",
+      "frame_index": 53
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_054_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_054_thumbnail.png",
+      "frame_index": 54
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_055_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_055_thumbnail.png",
+      "frame_index": 55
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_056_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_056_thumbnail.png",
+      "frame_index": 56
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_057_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_057_thumbnail.png",
+      "frame_index": 57
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_058_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_058_thumbnail.png",
+      "frame_index": 58
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_059_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_059_thumbnail.png",
+      "frame_index": 59
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_060_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_060_thumbnail.png",
+      "frame_index": 60
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_061_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_061_thumbnail.png",
+      "frame_index": 61
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_062_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_062_thumbnail.png",
+      "frame_index": 62
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_063_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_063_thumbnail.png",
+      "frame_index": 63
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_064_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_064_thumbnail.png",
+      "frame_index": 64
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_065_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_065_thumbnail.png",
+      "frame_index": 65
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_066_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_066_thumbnail.png",
+      "frame_index": 66
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_067_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_067_thumbnail.png",
+      "frame_index": 67
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_068_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_068_thumbnail.png",
+      "frame_index": 68
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_069_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_069_thumbnail.png",
+      "frame_index": 69
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_070_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_070_thumbnail.png",
+      "frame_index": 70
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_071_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_071_thumbnail.png",
+      "frame_index": 71
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_072_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_072_thumbnail.png",
+      "frame_index": 72
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_073_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_073_thumbnail.png",
+      "frame_index": 73
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_074_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_074_thumbnail.png",
+      "frame_index": 74
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_075_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_075_thumbnail.png",
+      "frame_index": 75
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_076_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_076_thumbnail.png",
+      "frame_index": 76
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_077_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_077_thumbnail.png",
+      "frame_index": 77
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_078_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_078_thumbnail.png",
+      "frame_index": 78
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_079_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_079_thumbnail.png",
+      "frame_index": 79
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_080_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_080_thumbnail.png",
+      "frame_index": 80
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_081_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_081_thumbnail.png",
+      "frame_index": 81
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_082_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_082_thumbnail.png",
+      "frame_index": 82
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_083_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_083_thumbnail.png",
+      "frame_index": 83
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_084_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_084_thumbnail.png",
+      "frame_index": 84
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_085_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_085_thumbnail.png",
+      "frame_index": 85
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_086_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_086_thumbnail.png",
+      "frame_index": 86
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_087_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_087_thumbnail.png",
+      "frame_index": 87
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_088_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_088_thumbnail.png",
+      "frame_index": 88
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_089_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_089_thumbnail.png",
+      "frame_index": 89
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_090_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_090_thumbnail.png",
+      "frame_index": 90
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_091_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_091_thumbnail.png",
+      "frame_index": 91
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_092_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_092_thumbnail.png",
+      "frame_index": 92
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_093_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_093_thumbnail.png",
+      "frame_index": 93
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_094_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_094_thumbnail.png",
+      "frame_index": 94
+    },
+    {
+      "normalized": "uploads\\PAT001\\0002_frame_095_normalized.png",
+      "thumbnail": "uploads\\PAT001\\0002_frame_095_thumbnail.png",
+      "frame_index": 95
+    }
+  ]
+}

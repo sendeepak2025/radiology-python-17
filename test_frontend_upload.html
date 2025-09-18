@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload Fix</title>
+</head>
+<body>
+    <h1>Test DICOM Upload Fix</h1>
+    <p>✅ Backend running on: <strong>http://localhost:8001</strong></p>
+    <p>✅ Frontend configured for: <strong>http://localhost:8001</strong></p>
+    <p>✅ Parameter name fixed: <strong>files</strong> (plural)</p>
+    
+    <h2>Test Results:</h2>
+    <div id="results">
+        <p>🧪 Testing backend endpoint directly...</p>
+    </div>
+
+    <script>
+        async function testUpload() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                // Test 1: Health check
+                const healthResponse = await fetch('http://localhost:8001/health');
+                const healthData = await healthResponse.json();
+                resultsDiv.innerHTML += `<p>✅ Health check: ${healthResponse.status} - ${healthData.status}</p>`;
+                
+                // Test 2: Create dummy DICOM file
+                const dummyContent = new Uint8Array([68, 73, 67, 77, ...new Array(100).fill(0)]);
+                const file = new File([dummyContent], 'test.dcm', { type: 'application/dicom' });
+                
+                // Test 3: Upload with correct parameters
+                const formData = new FormData();
+                formData.append('files', file); // Use 'files' (plural)
+                
+                const uploadResponse = await fetch('http://localhost:8001/patients/PAT002/upload/dicom', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (uploadResponse.ok) {
+                    const uploadData = await uploadResponse.json();
+                    resultsDiv.innerHTML += `<p>✅ Upload successful: ${uploadResponse.status}</p>`;
+                    resultsDiv.innerHTML += `<p>📋 Response: ${uploadData.message}</p>`;
+                } else {
+                    const errorData = await uploadResponse.json();
+                    resultsDiv.innerHTML += `<p>❌ Upload failed: ${uploadResponse.status}</p>`;
+                    resultsDiv.innerHTML += `<p>📋 Error: ${JSON.stringify(errorData)}</p>`;
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p>❌ Test failed: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test when page loads
+        testUpload();
+    </script>
+</body>
+</html>

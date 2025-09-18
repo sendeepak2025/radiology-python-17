@@ -101,5 +101,187 @@
         "image_url": "/uploads/PAT001/0002.DCM"
       }
     ]
+  },
+  "1.2.840.113619.2.5.a55239dba5d91458a7582cf3485c800a": {
+    "study_uid": "1.2.840.113619.2.5.a55239dba5d91458a7582cf3485c800a",
+    "patient_id": "PAT002",
+    "patient_name": "Patient PAT002",
+    "study_date": "2025-09-18",
+    "study_time": "07:19:04",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - sdfga.dcm",
+    "status": "received",
+    "original_filename": "sdfga.dcm",
+    "file_size": 104,
+    "dicom_url": "/uploads/PAT002/sdfga.dcm",
+    "created_at": "2025-09-18T07:19:04.913816",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/PAT002/sdfga.dcm"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.a55239dba5d91458a7582cf3485c800a_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT002/sdfga.dcm"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "File is missing DICOM File Meta Information header or the 'DICM' prefix is missing from the header. Use force=True to force reading."
+  },
+  "1.2.840.113619.2.5.46faff0f5a164a9d8b18db512d3f34c3": {
+    "study_uid": "1.2.840.113619.2.5.46faff0f5a164a9d8b18db512d3f34c3",
+    "patient_id": "PAT001",
+    "patient_name": "Patient PAT001",
+    "study_date": "2025-09-18",
+    "study_time": "07:25:19",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - TEST12.DCM",
+    "status": "received",
+    "original_filename": "TEST12.DCM",
+    "file_size": 526336,
+    "dicom_url": "/uploads/PAT001/TEST12.DCM",
+    "created_at": "2025-09-18T07:25:19.846217",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/PAT001/TEST12.DCM"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.46faff0f5a164a9d8b18db512d3f34c3_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT001/TEST12.DCM"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "'uploads\\\\PAT001\\\\TEST12_normalized.png' is not in the subpath of 'G:\\\\image'"
+  },
+  "1.2.840.113619.2.5.64adba26fb1e83597f4325e06aac6a6e": {
+    "study_uid": "1.2.840.113619.2.5.64adba26fb1e83597f4325e06aac6a6e",
+    "patient_id": "PAT001",
+    "patient_name": "Patient PAT001",
+    "study_date": "2025-09-18",
+    "study_time": "07:30:48",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - 0002 (1).DCM",
+    "status": "received",
+    "original_filename": "0002 (1).DCM",
+    "file_size": 1702398,
+    "dicom_url": "/uploads/PAT001/0002 (1).DCM",
+    "created_at": "2025-09-18T07:30:48.982508",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/PAT001/0002 (1).DCM"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.64adba26fb1e83597f4325e06aac6a6e_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT001/0002 (1).DCM"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "'uploads\\\\PAT001\\\\0002 (1)_normalized.png' is not in the subpath of 'G:\\\\image'"
+  },
+  "1.2.840.113619.2.5.0d06fb8cc99b14a19f3e31e6e3e2ba7d": {
+    "study_uid": "1.2.840.113619.2.5.0d06fb8cc99b14a19f3e31e6e3e2ba7d",
+    "patient_id": "PAT001",
+    "patient_name": "Patient PAT001",
+    "study_date": "2025-09-18",
+    "study_time": "07:32:52",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - test.dcm",
+    "status": "received",
+    "original_filename": "test.dcm",
+    "file_size": 104,
+    "dicom_url": "/uploads/PAT001/test.dcm",
+    "created_at": "2025-09-18T07:32:52.712406",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/PAT001/test.dcm"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.0d06fb8cc99b14a19f3e31e6e3e2ba7d_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT001/test.dcm"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "File is missing DICOM File Meta Information header or the 'DICM' prefix is missing from the header. Use force=True to force reading."
+  },
+  "1.2.840.113619.2.5.28b831420737ff1ca20a3b7259c6605e": {
+    "study_uid": "1.2.840.113619.2.5.28b831420737ff1ca20a3b7259c6605e",
+    "patient_id": "QUICKTEST",
+    "patient_name": "Patient QUICKTEST",
+    "study_date": "2025-09-18",
+    "study_time": "07:34:59",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - test_upload.dcm",
+    "status": "received",
+    "original_filename": "test_upload.dcm",
+    "file_size": 204,
+    "dicom_url": "/uploads/QUICKTEST/test_upload.dcm",
+    "created_at": "2025-09-18T07:34:59.525879",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/QUICKTEST/test_upload.dcm"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.28b831420737ff1ca20a3b7259c6605e_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/QUICKTEST/test_upload.dcm"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "File is missing DICOM File Meta Information header or the 'DICM' prefix is missing from the header. Use force=True to force reading."
+  },
+  "1.2.840.113619.2.5.2d3f2c558ef9702da5ccc71b4fccad53": {
+    "study_uid": "1.2.840.113619.2.5.2d3f2c558ef9702da5ccc71b4fccad53",
+    "patient_id": "PAT001",
+    "patient_name": "Patient PAT001",
+    "study_date": "2025-09-18",
+    "study_time": "07:35:30",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - 2a_Head_t1_tse_dark-fluid_sag_p4.dcm",
+    "status": "received",
+    "original_filename": "2a_Head_t1_tse_dark-fluid_sag_p4.dcm",
+    "file_size": 742608,
+    "dicom_url": "/uploads/PAT001/2a_Head_t1_tse_dark-fluid_sag_p4.dcm",
+    "created_at": "2025-09-18T07:35:30.016854",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/PAT001/2a_Head_t1_tse_dark-fluid_sag_p4.dcm"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.2d3f2c558ef9702da5ccc71b4fccad53_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/PAT001/2a_Head_t1_tse_dark-fluid_sag_p4.dcm"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "'uploads\\\\PAT001\\\\2a_Head_t1_tse_dark-fluid_sag_p4_normalized.png' is not in the subpath of 'G:\\\\image'"
+  },
+  "1.2.840.113619.2.5.4f0d357ef64c786456a5fe75d19af670": {
+    "study_uid": "1.2.840.113619.2.5.4f0d357ef64c786456a5fe75d19af670",
+    "patient_id": "SERIESTEST",
+    "patient_name": "Patient SERIESTEST",
+    "study_date": "2025-09-18",
+    "study_time": "07:59:01",
+    "modality": "CT",
+    "study_description": "Uploaded DICOM - test_slice_3.dcm",
+    "status": "received",
+    "original_filename": "test_slice_3.dcm",
+    "file_size": 111,
+    "dicom_url": "/uploads/SERIESTEST/test_slice_3.dcm",
+    "created_at": "2025-09-18T07:59:01.999332",
+    "image_urls": [
+      "wadouri:http://localhost:8000/uploads/SERIESTEST/test_slice_3.dcm"
+    ],
+    "images": [
+      {
+        "image_uid": "1.2.840.113619.2.5.4f0d357ef64c786456a5fe75d19af670_image_1",
+        "image_number": 1,
+        "image_url": "/uploads/SERIESTEST/test_slice_3.dcm"
+      }
+    ],
+    "processing_status": "failed",
+    "processing_error": "File is missing DICOM File Meta Information header or the 'DICM' prefix is missing from the header. Use force=True to force reading."
   }
 }

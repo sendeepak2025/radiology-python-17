@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { 
-  Box, Typography, Paper, Alert, CircularProgress, Button, 
+import {
+  Box, Typography, Paper, Alert, CircularProgress, Button,
   Card, CardContent, Grid, Chip, IconButton, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
@@ -21,9 +21,9 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [currentImage, setCurrentImage] = useState<HTMLImageElement | null>(null);
+  const currentImageRef = useRef<HTMLImageElement | null>(null);
   const [showMetadata, setShowMetadata] = useState(false);
-  
+
   // Image manipulation states
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -31,15 +31,27 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
   const [contrast, setContrast] = useState(100);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
+  // URL building utility
+  const buildUrl = (raw: string) => {
+    if (!raw) return '';
+    // Strip custom prefixes
+    const cleaned = raw.replace(/^wadouri:/i, '').replace(/^dicom:/i, '').trim();
+    if (/^https?:\/\//i.test(cleaned)) return cleaned;
+    if (cleaned.startsWith('/')) return `http://localhost:8000${cleaned}`;
+    return `http://localhost:8000/${cleaned}`;
+  };
+
   const loadSmartDicomImage = async () => {
     try {
       setLoading(true);
       setError(null);
+      setImageLoaded(false);
+      currentImageRef.current = null;
 
       console.log('🧠 Smart DICOM Viewer - Processing study:', study);
 
       const studyAny = study as any;
-      
+
       // Smart image priority: processed images > previews > thumbnails > original
       const imageOptions = [
         { url: studyAny.processed_images?.preview, type: 'Processed Preview', quality: 'High' },
@@ -66,10 +78,9 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
 
       // Try loading images in priority order
       for (const option of imageOptions) {
-        const cleanUrl = option.url.startsWith('/') ? option.url : `/${option.url}`;
-        const fullUrl = option.url.startsWith('http') ? option.url : `http://localhost:8000${cleanUrl}`;
+        const fullUrl = buildUrl(option.url);
         console.log(`🔍 Trying ${option.type} image:`, fullUrl);
-        
+
         const success = await tryLoadImage(fullUrl, option.type);
         if (success) {
           return;
@@ -95,10 +106,13 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+      let done = false;
+
       img.onload = () => {
+        if (done) return;
+        done = true;
         console.log(`✅ Successfully loaded ${type} image`);
-        setCurrentImage(img);
+        currentImageRef.current = img;
         drawImageToCanvas(img);
         setImageLoaded(true);
         setLoading(false);
@@ -106,6 +120,8 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
       };
 
       img.onerror = () => {
+        if (done) return;
+        done = true;
         console.log(`❌ Failed to load ${type} image`);
         resolve(false);
       };
@@ -133,7 +149,7 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
     ctx.fillStyle = '#333333';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    
+
     const lines = [
       '📋 DICOM Study Information',
       '',
@@ -175,38 +191,30 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Calculate canvas size
     const maxSize = 512;
-    let { width, height } = img;
-    
-    if (width > maxSize || height > maxSize) {
-      const ratio = Math.min(maxSize / width, maxSize / height);
-      width *= ratio;
-      height *= ratio;
-    }
+    let w = img.width;
+    let h = img.height;
+    const ratio = Math.min(1, maxSize / Math.max(w, h));
+    w *= ratio;
+    h *= ratio;
 
-    canvas.width = width;
-    canvas.height = height;
+    const rad = (rotation * Math.PI) / 180;
+    // Calculate bounding box after rotation and scale (zoom)
+    const sin = Math.abs(Math.sin(rad));
+    const cos = Math.abs(Math.cos(rad));
+    const bboxW = Math.ceil((w * cos + h * sin) * zoom);
+    const bboxH = Math.ceil((w * sin + h * cos) * zoom);
 
-    // Clear canvas
+    canvas.width = bboxW;
+    canvas.height = bboxH;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Apply transformations
     ctx.save();
-    
-    // Move to center for transformations
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    
-    // Apply zoom and rotation
+    ctx.translate(canvas.width / 2 + pan.x, canvas.height / 2 + pan.y);
     ctx.scale(zoom, zoom);
-    ctx.rotate((rotation * Math.PI) / 180);
-    
-    // Apply brightness and contrast filters
+    ctx.rotate(rad);
     ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
-    
-    // Draw image centered
-    ctx.drawImage(img, -width / 2, -height / 2, width, height);
-    
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
     ctx.restore();
   };
 
@@ -238,10 +246,15 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const link = document.createElement('a');
-    link.download = `${study.original_filename || 'dicom_image'}_processed.png`;
-    link.href = canvas.toDataURL();
-    link.click();
+    try {
+      const link = document.createElement('a');
+      link.download = `${study.original_filename || 'dicom_image'}_processed.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (err) {
+      console.error('Download failed — canvas may be tainted by CORS', err);
+      setError('Cannot download image: cross-origin restriction. Please enable CORS on the image server.');
+    }
   };
 
   const getDicomMetadata = () => {
@@ -250,14 +263,52 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
   };
 
   useEffect(() => {
+    let active = true;
     loadSmartDicomImage();
+    return () => {
+      active = false;
+    };
   }, [study]);
 
   useEffect(() => {
-    if (currentImage && imageLoaded) {
-      drawImageToCanvas(currentImage);
+    if (currentImageRef.current && imageLoaded) {
+      drawImageToCanvas(currentImageRef.current);
     }
-  }, [zoom, rotation, brightness, contrast, currentImage, imageLoaded]);
+  }, [zoom, rotation, brightness, contrast, pan, imageLoaded]);
+
+  // Pan functionality
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    let dragging = false;
+    let start = { x: 0, y: 0 };
+
+    const onPointerDown = (e: PointerEvent) => {
+      dragging = true;
+      start = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      canvas.setPointerCapture(e.pointerId);
+    };
+    
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      setPan({ x: e.clientX - start.x, y: e.clientY - start.y });
+    };
+    
+    const onPointerUp = () => {
+      dragging = false;
+    };
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+  }, [pan]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -269,31 +320,31 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
               🧠 Smart DICOM Viewer
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip 
-                label={study.modality || 'Unknown'} 
-                color="primary" 
-                size="small" 
+              <Chip
+                label={study.modality || 'Unknown'}
+                color="primary"
+                size="small"
               />
-              <Chip 
-                label={`${study.original_filename}`} 
-                variant="outlined" 
-                size="small" 
+              <Chip
+                label={`${study.original_filename}`}
+                variant="outlined"
+                size="small"
               />
-              <Chip 
-                label={study.study_date || 'No date'} 
-                variant="outlined" 
-                size="small" 
+              <Chip
+                label={study.study_date || 'No date'}
+                variant="outlined"
+                size="small"
               />
               {(study as any).processing_status && (
-                <Chip 
+                <Chip
                   label={`Processing: ${(study as any).processing_status}`}
                   color={(study as any).processing_status === 'completed' ? 'success' : 'warning'}
-                  size="small" 
+                  size="small"
                 />
               )}
             </Box>
           </Grid>
-          
+
           <Grid item xs={12} md={4}>
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <Button
@@ -335,7 +386,7 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
             <Typography variant="caption" sx={{ mx: 1 }}>
               {Math.round(zoom * 100)}%
             </Typography>
-            
+
             <Tooltip title="Rotate Left">
               <IconButton onClick={handleRotateLeft} size="small">
                 <RotateLeft />
@@ -346,7 +397,7 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
                 <RotateRight />
               </IconButton>
             </Tooltip>
-            
+
             <Button onClick={handleReset} size="small" variant="text">
               Reset
             </Button>
@@ -374,6 +425,13 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
 
         <canvas
           ref={canvasRef}
+          tabIndex={0}
+          role="img"
+          aria-label={`DICOM image ${study.original_filename || ''}`}
+          onWheel={(e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) handleZoomIn(); else handleZoomOut();
+          }}
           style={{
             maxWidth: '100%',
             maxHeight: '100%',
@@ -392,20 +450,31 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
             <Typography variant="body2" color="text.secondary">
               This study does not contain viewable medical images.
             </Typography>
-            <Button
-              variant="contained"
-              onClick={loadSmartDicomImage}
-              sx={{ mt: 2 }}
-            >
-              Retry Loading
-            </Button>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                onClick={loadSmartDicomImage}
+              >
+                Retry Loading
+              </Button>
+              {(study as any).dicom_url && (
+                <Button
+                  variant="outlined"
+                  href={(study as any).dicom_url}
+                  target="_blank"
+                  startIcon={<Download />}
+                >
+                  Download DICOM
+                </Button>
+              )}
+            </Box>
           </Box>
         )}
       </Paper>
 
       {/* Metadata Dialog */}
-      <Dialog 
-        open={showMetadata} 
+      <Dialog
+        open={showMetadata}
         onClose={() => setShowMetadata(false)}
         maxWidth="md"
         fullWidth
@@ -426,7 +495,15 @@ const SmartDicomViewer: React.FC<SmartDicomViewerProps> = ({ study, onError }) =
                 {Object.entries(getDicomMetadata()).map(([key, value]) => (
                   <TableRow key={key}>
                     <TableCell>{key.replace(/_/g, ' ').toUpperCase()}</TableCell>
-                    <TableCell>{String(value) || 'N/A'}</TableCell>
+                    <TableCell>
+                      {typeof value === 'object' ? (
+                        <pre style={{whiteSpace:'pre-wrap', fontSize: '0.8rem'}}>
+                          {JSON.stringify(value, null, 2)}
+                        </pre>
+                      ) : (
+                        String(value) || 'N/A'
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
                 <TableRow>

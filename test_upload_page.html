@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload Functionality</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Upload Functionality Test</h1>
+    
+    <div class="test-section">
+        <h2>Backend Status</h2>
+        <div id="backend-status">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Upload Test</h2>
+        <input type="file" id="fileInput" accept=".dcm,.dicom" />
+        <button onclick="testUpload()">Test Upload</button>
+        <div id="upload-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Frontend Configuration</h2>
+        <div id="frontend-config">
+            <p><strong>API Base URL:</strong> http://localhost:8000</p>
+            <p><strong>Parameter Name:</strong> files (plural)</p>
+            <p><strong>Expected Response:</strong> 200 OK with study data</p>
+        </div>
+    </div>
+
+    <script>
+        // Test backend status
+        async function testBackend() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                document.getElementById('backend-status').innerHTML = 
+                    `<span class="success">✅ Backend healthy</span><br>
+                     Version: ${data.version}<br>
+                     Timestamp: ${data.timestamp}`;
+            } catch (error) {
+                document.getElementById('backend-status').innerHTML = 
+                    `<span class="error">❌ Backend not responding: ${error.message}</span>`;
+            }
+        }
+        
+        // Test upload
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const resultDiv = document.getElementById('upload-result');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                resultDiv.innerHTML = '<span class="error">❌ Please select a file first</span>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('files', file); // Use 'files' parameter
+            formData.append('description', 'Test upload from HTML page');
+            
+            try {
+                resultDiv.innerHTML = '<span class="info">🚀 Uploading...</span>';
+                
+                const response = await fetch('http://localhost:8000/patients/TEST001/upload/dicom', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = 
+                        `<span class="success">✅ Upload successful!</span><br>
+                         Study UID: ${data.study_uid}<br>
+                         File Size: ${data.file_size} bytes<br>
+                         Processing: ${data.processing_result ? 'Success' : 'Failed'}`;
+                } else {
+                    resultDiv.innerHTML = 
+                        `<span class="error">❌ Upload failed: ${response.status}</span><br>
+                         Error: ${JSON.stringify(data, null, 2)}`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = 
+                    `<span class="error">❌ Upload error: ${error.message}</span>`;
+            }
+        }
+        
+        // Test on page load
+        testBackend();
+    </script>
+</body>
+</html>

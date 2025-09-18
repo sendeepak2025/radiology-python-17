@@ -58,11 +58,13 @@ import {
 } from "@mui/icons-material";
 import { useParams } from "react-router-dom"
 
-import ProfessionalDicomViewer from "../components/DICOM/ProfessionalDicomViewer"
-import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
+// Quarantined viewers - moved to quarantine folder
+// import ProfessionalDicomViewer from "../components/DICOM/ProfessionalDicomViewer"
+// import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
 import WorkingDicomViewer from "../components/DICOM/WorkingDicomViewer"
 import SmartDicomViewer from "../components/DICOM/SmartDicomViewer"
-import AdvancedMedicalDicomViewer from "../components/DICOM/AdvancedMedicalDicomViewer"
+import MultiFrameDicomViewer from "../components/DICOM/MultiFrameDicomViewer"
+import CreateReportDialog from "../components/Report/CreateReportDialog"
 import type { Study } from "../types"
 import { apiService } from "../services/api"
 
@@ -78,6 +80,7 @@ const StudyViewer: React.FC = () => {
   const [urgentFindings, setUrgentFindings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [useSimpleViewer, setUseSimpleViewer] = useState(true) // Start with simple viewer
+
 
   useEffect(() => {
     console.log("🚀 StudyViewer component mounted with studyUid:", studyUid)
@@ -141,9 +144,11 @@ const StudyViewer: React.FC = () => {
   }
 
   const handleCreateReport = () => {
-    console.log("Creating new report for study:", studyUid)
-    // In a real app, this would navigate to create report page
+    console.log("Create report for study:", studyUid)
+    // TODO: Implement report creation
   }
+
+
 
   const handleViewBilling = () => {
     console.log("Viewing billing for study:", studyUid)
@@ -624,7 +629,7 @@ const StudyViewer: React.FC = () => {
           }}
         >
           {study ? (
-            <AdvancedMedicalDicomViewer
+            <MultiFrameDicomViewer
               study={study}
               onError={(error) => {
                 console.error("Advanced Medical DICOM Viewer Error:", error)

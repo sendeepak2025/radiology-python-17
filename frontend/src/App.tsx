@@ -20,7 +20,8 @@ import LoadingScreen from './components/Common/LoadingScreen';
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary';
 import WorkflowTestPage from './pages/WorkflowTestPage';
 import LoginPage from './pages/LoginPage';
-import DicomTest from './components/DICOM/DicomTest';
+// Quarantined component - moved to quarantine folder
+// import DicomTest from './components/DICOM/DicomTest';
 import DebugReports from './pages/DebugReports';
 import { backgroundQueueProcessor } from './services/backgroundQueueProcessor';
 
@@ -194,9 +195,10 @@ function App() {
                 
                 <Route path="/workflow-test" element={<WorkflowTestPage />} />
                 
-                <Route path="/test" element={<DicomTest />} />
+                {/* Quarantined routes - DicomTest moved to quarantine */}
+                {/* <Route path="/test" element={<DicomTest />} /> */}
                 
-                <Route path="/dicom-test" element={<DicomTest />} />
+                {/* <Route path="/dicom-test" element={<DicomTest />} /> */}
                 
                 <Route path="/debug-reports" element={<DebugReports />} />
                 

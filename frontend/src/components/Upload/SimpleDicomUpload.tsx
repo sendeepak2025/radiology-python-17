@@ -23,6 +23,8 @@ interface UploadResult {
   error?: string;
   file_size?: number;
   upload_time?: string;
+  slice_number?: number;
+  total_slices?: number;
 }
 
 const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({ 
@@ -33,11 +35,24 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      setSelectedFiles([]);
+      return;
+    }
+
+    // Convert FileList to Array
+    const fileArray = Array.from(files);
+    setSelectedFiles(fileArray);
+    console.log(`📁 Selected ${fileArray.length} files:`, fileArray.map(f => f.name));
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
 
     setUploading(true);
     setUploadProgress(0);
@@ -45,16 +60,50 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
 
     const results: UploadResult[] = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      try {
-        console.log(`🚀 Uploading: ${file.name}`);
+    try {
+      if (selectedFiles.length > 1) {
+        // Upload multiple files as a DICOM series
+        console.log(`🚀 Uploading ${selectedFiles.length} files as DICOM series`);
+        setUploadProgress(50); // Show progress during upload
         
-        // Update progress
-        setUploadProgress((i / files.length) * 100);
+        const response = await patientService.uploadDicomSeries(
+          patientId, 
+          selectedFiles, 
+          `DICOM Series - ${selectedFiles.length} slices`
+        );
+        
+        console.log('📊 Series upload response:', response);
+        
+        if (response.success) {
+          // Create results for each file in the series
+          selectedFiles.forEach((file, index) => {
+            results.push({
+              filename: file.name,
+              success: true,
+              study_uid: response.series_uid,
+              processing_result: response.processing_results,
+              file_size: file.size,
+              upload_time: new Date().toISOString(),
+              slice_number: index + 1,
+              total_slices: selectedFiles.length
+            });
+          });
+        } else {
+          selectedFiles.forEach((file) => {
+            results.push({
+              filename: file.name,
+              success: false,
+              error: response.message || 'Series upload failed',
+              file_size: file.size
+            });
+          });
+        }
+      } else {
+        // Upload single file
+        const file = selectedFiles[0];
+        console.log(`🚀 Uploading single file: ${file.name}`);
+        setUploadProgress(50);
 
-        // Upload file
         const response = await patientService.uploadFile(patientId, file, 'DICOM study');
         
         console.log('📊 Upload response:', response);
@@ -76,21 +125,40 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
             file_size: file.size
           });
         }
+      }
 
-      } catch (error: unknown) {
-        console.error(`❌ Upload failed for ${file.name}:`, error);
+    } catch (error: unknown) {
+      console.error(`❌ Upload failed:`, error);
+      let errorMessage = 'Upload failed';
+      
+      // Safe error message extraction
+      if (error && typeof error === 'object') {
+        if ('message' in error && typeof (error as any).message === 'string') {
+          errorMessage = (error as any).message;
+        } else if ('toString' in error && typeof (error as any).toString === 'function') {
+          errorMessage = (error as any).toString();
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // Add error results for all selected files
+      selectedFiles.forEach((file) => {
         results.push({
           filename: file.name,
           success: false,
-          error: error instanceof Error ? error.message : 'Upload failed',
+          error: errorMessage,
           file_size: file.size
         });
-      }
+      });
     }
 
     setUploadProgress(100);
     setUploadResults(results);
     setUploading(false);
+
+    // Clear selected files after upload
+    setSelectedFiles([]);
 
     // Notify parent component
     if (onUploadComplete) {
@@ -168,7 +236,7 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
           </Box>
         )}
 
-        {!uploading && (
+        {!uploading && selectedFiles.length === 0 && (
           <Button
             variant="contained"
             startIcon={<CloudUpload />}
@@ -177,6 +245,45 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
           >
             Select Files
           </Button>
+        )}
+
+        {/* Show selected files */}
+        {selectedFiles.length > 0 && !uploading && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              📁 Selected {selectedFiles.length} file(s):
+            </Typography>
+            {selectedFiles.map((file, index) => (
+              <Chip 
+                key={index}
+                label={`${file.name} (${Math.round(file.size / 1024)} KB)`}
+                size="small"
+                sx={{ m: 0.5 }}
+              />
+            ))}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<CloudUpload />}
+                onClick={handleUpload}
+              >
+                {selectedFiles.length > 1 
+                  ? `Upload Series (${selectedFiles.length} slices)` 
+                  : `Upload ${selectedFiles.length} File`
+                }
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setSelectedFiles([]);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              >
+                Clear
+              </Button>
+            </Box>
+          </Box>
         )}
       </Paper>
 
@@ -221,8 +328,15 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
                           </Typography>
                           {result.success && result.study_uid && (
                             <Chip 
-                              label="Study Created" 
+                              label={result.total_slices ? `Series Created (${result.total_slices} slices)` : "Study Created"} 
                               color="success" 
+                              size="small" 
+                            />
+                          )}
+                          {result.slice_number && (
+                            <Chip 
+                              label={`Slice ${result.slice_number}/${result.total_slices}`} 
+                              color="info" 
                               size="small" 
                             />
                           )}
@@ -233,7 +347,8 @@ const SimpleDicomUpload: React.FC<SimpleDicomUploadProps> = ({
                           {result.success ? (
                             <Typography variant="body2" color="success.main">
                               ✅ Uploaded successfully
-                              {result.study_uid && ` • Study UID: ${result.study_uid.substring(0, 20)}...`}
+                              {result.study_uid && ` • Series UID: ${result.study_uid.substring(0, 20)}...`}
+                              {result.total_slices && ` • Part of ${result.total_slices}-slice series`}
                             </Typography>
                           ) : (
                             <Typography variant="body2" color="error.main">

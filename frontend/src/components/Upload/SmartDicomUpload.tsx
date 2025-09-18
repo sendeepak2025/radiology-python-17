@@ -27,18 +27,26 @@ interface UploadResult {
   upload_time?: string;
 }
 
-const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({ 
-  patientId, 
-  onUploadComplete, 
-  onError 
+const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
+  patientId,
+  onUploadComplete,
+  onError
 }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showDetails, setShowDetails] = useState(false);
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
+
+    setSelectedFiles(acceptedFiles);
+    console.log(`📁 Selected ${acceptedFiles.length} files via drag & drop:`, acceptedFiles.map(f => f.name));
+  }, []);
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
 
     setUploading(true);
     setUploadProgress(0);
@@ -46,18 +54,18 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
 
     const results: UploadResult[] = [];
 
-    for (let i = 0; i < acceptedFiles.length; i++) {
-      const file = acceptedFiles[i];
-      
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+
       try {
         console.log(`🚀 Smart upload starting: ${file.name}`);
-        
+
         // Update progress
-        setUploadProgress((i / acceptedFiles.length) * 100);
+        setUploadProgress((i / selectedFiles.length) * 100);
 
         // Upload file
         const response = await patientService.uploadFile(patientId, file, 'DICOM study');
-        
+
         console.log('📊 Upload response:', response);
 
         if (response.success) {
@@ -80,10 +88,22 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
 
       } catch (error: unknown) {
         console.error(`❌ Upload failed for ${file.name}:`, error);
+        let errorMessage = 'Upload failed';
+
+        // Safe error message extraction
+        if (error && typeof error === 'object') {
+          if ('message' in error && typeof (error as any).message === 'string') {
+            errorMessage = (error as any).message;
+          } else if ('toString' in error && typeof (error as any).toString === 'function') {
+            errorMessage = (error as any).toString();
+          }
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
         results.push({
           filename: file.name,
           success: false,
-          error: error instanceof Error ? error.message : 'Upload failed',
+          error: errorMessage,
           file_size: file.size
         });
       }
@@ -92,6 +112,9 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
     setUploadProgress(100);
     setUploadResults(results);
     setUploading(false);
+
+    // Clear selected files after upload
+    setSelectedFiles([]);
 
     // Notify parent component
     if (onUploadComplete) {
@@ -103,8 +126,7 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
     if (hasProcessingResults) {
       setShowDetails(true);
     }
-
-  }, [patientId, onUploadComplete]);
+  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -118,7 +140,7 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
 
   const getProcessingStatus = (result: UploadResult) => {
     if (!result.processing_result) return null;
-    
+
     const processing = result.processing_result;
     if (processing.success) {
       return {
@@ -163,19 +185,19 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
         }}
       >
         <input {...getInputProps()} />
-        
-        <CloudUpload 
-          sx={{ 
-            fontSize: 48, 
+
+        <CloudUpload
+          sx={{
+            fontSize: 48,
             color: isDragActive ? 'primary.main' : 'grey.400',
-            mb: 2 
-          }} 
+            mb: 2
+          }}
         />
-        
+
         <Typography variant="h6" gutterBottom>
           🧠 Smart DICOM Upload
         </Typography>
-        
+
         {isDragActive ? (
           <Typography variant="body1" color="primary">
             Drop DICOM files here for intelligent processing...
@@ -193,9 +215,9 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
 
         {uploading && (
           <Box sx={{ mt: 2 }}>
-            <LinearProgress 
-              variant="determinate" 
-              value={uploadProgress} 
+            <LinearProgress
+              variant="determinate"
+              value={uploadProgress}
               sx={{ mb: 1 }}
             />
             <Typography variant="body2">
@@ -204,6 +226,43 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
           </Box>
         )}
       </Paper>
+
+      {/* Show selected files */}
+      {selectedFiles.length > 0 && !uploading && (
+        <Paper sx={{ p: 2, mt: 2, bgcolor: 'grey.50' }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            📁 Selected {selectedFiles.length} file(s) for smart processing:
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {selectedFiles.map((file, index) => (
+              <Chip
+                key={index}
+                label={`${file.name} (${Math.round(file.size / 1024)} KB)`}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<CloudUpload />}
+              onClick={handleUpload}
+              size="large"
+            >
+              🧠 Smart Upload {selectedFiles.length} File(s)
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setSelectedFiles([])}
+            >
+              Clear Selection
+            </Button>
+          </Box>
+        </Paper>
+      )}
 
       {/* Upload Results */}
       {uploadResults.length > 0 && (
@@ -214,12 +273,12 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
                 📊 Upload Results
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip 
+                <Chip
                   label={`${getSuccessCount()}/${uploadResults.length} successful`}
                   color={getSuccessCount() === uploadResults.length ? 'success' : 'warning'}
                   size="small"
                 />
-                <Chip 
+                <Chip
                   label={`${Math.round(getTotalFileSize() / 1024)} KB total`}
                   variant="outlined"
                   size="small"
@@ -230,7 +289,7 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
             <List dense>
               {uploadResults.map((result, index) => {
                 const processing = getProcessingStatus(result);
-                
+
                 return (
                   <React.Fragment key={index}>
                     <ListItem>
@@ -248,17 +307,17 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
                               {result.filename}
                             </Typography>
                             {result.success && result.study_uid && (
-                              <Chip 
-                                label="Study Created" 
-                                color="success" 
-                                size="small" 
+                              <Chip
+                                label="Study Created"
+                                color="success"
+                                size="small"
                               />
                             )}
                             {processing?.status === 'success' && (
-                              <Chip 
-                                label="Processed" 
-                                color="primary" 
-                                size="small" 
+                              <Chip
+                                label="Processed"
+                                color="primary"
+                                size="small"
                               />
                             )}
                           </Box>
@@ -275,10 +334,10 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
                                 ❌ {result.error}
                               </Typography>
                             )}
-                            
+
                             {processing && (
-                              <Typography 
-                                variant="body2" 
+                              <Typography
+                                variant="body2"
                                 color={processing.status === 'success' ? 'primary.main' : 'error.main'}
                                 sx={{ mt: 0.5 }}
                               >
@@ -311,28 +370,28 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
                   <Box sx={{ mt: 2 }}>
                     {uploadResults.map((result, index) => {
                       if (!result.processing_result || !result.success) return null;
-                      
+
                       const processing = result.processing_result;
-                      
+
                       return (
                         <Card key={index} variant="outlined" sx={{ mb: 2 }}>
                           <CardContent>
                             <Typography variant="subtitle2" gutterBottom>
                               🔬 Processing Details - {result.filename}
                             </Typography>
-                            
+
                             <Grid container spacing={2}>
                               <Grid item xs={12} md={6}>
                                 <Typography variant="body2" color="text.secondary" gutterBottom>
                                   Processing Type:
                                 </Typography>
-                                <Chip 
+                                <Chip
                                   label={processing.processing_type || 'Advanced'}
                                   color="primary"
                                   size="small"
                                 />
                               </Grid>
-                              
+
                               {processing.processed_files && (
                                 <Grid item xs={12} md={6}>
                                   <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -351,7 +410,7 @@ const SmartDicomUpload: React.FC<SmartDicomUploadProps> = ({
                                   </Box>
                                 </Grid>
                               )}
-                              
+
                               {processing.metadata && (
                                 <Grid item xs={12}>
                                   <Typography variant="body2" color="text.secondary" gutterBottom>

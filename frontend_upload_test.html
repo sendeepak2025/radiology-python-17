@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input[type="file"] { margin: 10px 0; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Frontend Upload Test</h1>
+    
+    <div class="info">
+        <strong>Current Configuration:</strong><br>
+        • Backend: http://localhost:8000<br>
+        • Parameter: files (plural)<br>
+        • Endpoint: /patients/{id}/upload/dicom<br>
+        • Expected: 200 OK with study data
+    </div>
+    
+    <h2>📤 Upload Test</h2>
+    <input type="file" id="fileInput" accept=".dcm,.dicom" multiple />
+    <br>
+    <button onclick="testUpload()">🚀 Test Upload</button>
+    <button onclick="testBackendHealth()">🏥 Test Backend</button>
+    <button onclick="clearResults()">🧹 Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script>
+        let resultCount = 0;
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.innerHTML = `<strong>[${++resultCount}]</strong> ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            resultCount = 0;
+        }
+        
+        async function testBackendHealth() {
+            addResult('🔍 Testing backend health...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Backend healthy: ${data.status} (v${data.version})`, 'success');
+                } else {
+                    addResult(`❌ Backend unhealthy: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Backend connection failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                addResult('⚠️ Please select at least one file first', 'warning');
+                return;
+            }
+            
+            addResult(`📁 Selected ${fileInput.files.length} file(s)`, 'info');
+            
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                await uploadSingleFile(file, i + 1);
+            }
+        }
+        
+        async function uploadSingleFile(file, fileNumber) {
+            addResult(`🚀 [${fileNumber}] Uploading: ${file.name} (${Math.round(file.size/1024)} KB)`, 'info');
+            
+            const formData = new FormData();
+            formData.append('files', file); // Use 'files' parameter (plural)
+            formData.append('description', `Test upload from HTML - File ${fileNumber}`);
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('http://localhost:8000/patients/HTMLTEST/upload/dicom', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const uploadTime = Date.now() - startTime;
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ [${fileNumber}] Upload successful in ${uploadTime}ms`, 'success');
+                    addResult(`📋 Study UID: ${data.study_uid}`, 'success');
+                    addResult(`📊 File Size: ${data.file_size} bytes`, 'success');
+                    
+                    if (data.processing_result) {
+                        const processing = data.processing_result;
+                        if (processing.success) {
+                            addResult(`🔬 Processing: Success (${processing.processing_method || 'unknown'})`, 'success');
+                            if (processing.metadata) {
+                                addResult(`👤 Patient: ${processing.metadata.patient_name || 'Unknown'}`, 'info');
+                                addResult(`🏥 Modality: ${processing.metadata.modality || 'Unknown'}`, 'info');
+                            }
+                        } else {
+                            addResult(`⚠️ Processing failed: ${processing.error || 'Unknown error'}`, 'warning');
+                        }
+                    }
+                } else {
+                    addResult(`❌ [${fileNumber}] Upload failed: ${response.status} ${response.statusText}`, 'error');
+                    addResult(`📄 Error details: <pre>${JSON.stringify(data, null, 2)}</pre>`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ [${fileNumber}] Upload error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test backend on page load
+        window.onload = function() {
+            addResult('🌐 Page loaded - Ready for testing', 'info');
+            testBackendHealth();
+        };
+    </script>
+</body>
+</html>
