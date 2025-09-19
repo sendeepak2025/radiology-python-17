@@ -23,6 +23,8 @@ import {
   useMediaQuery,
   Drawer,
   Fab,
+  Tabs,
+  Tab,
 } from "@mui/material"
 import {
   Assignment as ReportIcon,
@@ -48,6 +50,9 @@ import {
   Speed as SpeedIcon,
   Assessment as AssessmentIcon,
   Group as GroupIcon,
+  ViewInAr as ThreeDIcon,
+  ViewModule as TwoDIcon,
+  Dashboard as ComprehensiveIcon,
   Chat as ChatIcon,
   VideoCall as VideoCallIcon,
   PersonAdd as PersonAddIcon,
@@ -56,14 +61,17 @@ import {
   Menu as MenuIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
+
 import { useParams } from "react-router-dom"
 
 // Quarantined viewers - moved to quarantine folder
 // import ProfessionalDicomViewer from "../components/DICOM/ProfessionalDicomViewer"
-// import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
-import WorkingDicomViewer from "../components/DICOM/WorkingDicomViewer"
-import SmartDicomViewer from "../components/DICOM/SmartDicomViewer"
+import SimpleDicomViewer from "../components/DICOM/SimpleDicomViewer"
 import MultiFrameDicomViewer from "../components/DICOM/MultiFrameDicomViewer"
+import ThreeDViewer from "../components/DICOM/ThreeDViewer"
+import ComprehensiveDicomViewer from "../components/DICOM/ComprehensiveDicomViewer"
+import OptimizedDicomViewer from "../components/DICOM/OptimizedDicomViewer"
+import DicomPerformanceMonitor from "../components/DICOM/DicomPerformanceMonitor"
 import CreateReportDialog from "../components/Report/CreateReportDialog"
 import type { Study } from "../types"
 import { apiService } from "../services/api"
@@ -80,6 +88,59 @@ const StudyViewer: React.FC = () => {
   const [urgentFindings, setUrgentFindings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [useSimpleViewer, setUseSimpleViewer] = useState(true) // Start with simple viewer
+  const [viewerTab, setViewerTab] = useState(0) // 0 = Simple, 1 = MultiFrame, 2 = 3D, 3 = Comprehensive, 4 = Optimized
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
+  const [threeDSettings, setThreeDSettings] = useState({
+    renderMode: 'volume' as 'volume' | 'mip' | 'surface' | 'raycast',
+    opacity: 0.8,
+    threshold: 0.1,
+    windowWidth: 400,
+    windowCenter: 40,
+    colorMap: 'grayscale' as 'grayscale' | 'hot' | 'cool' | 'bone'
+  })
+
+  // Helper function to get DICOM URLs for 3D rendering
+  const getDicomImageIds = (study: Study): string[] => {
+    console.log('🔧 [StudyViewer] Getting DICOM URLs for study:', study.study_uid, 'Patient:', study.patient_id);
+    
+    const cleanUrls: string[] = [];
+    
+    // Extract clean HTTP URLs from the study's image_urls (remove wadouri: prefix if present)
+    if (study.image_urls && Array.isArray(study.image_urls)) {
+      study.image_urls.forEach(url => {
+        let cleanUrl = url;
+        if (url.startsWith('wadouri:')) {
+          cleanUrl = url.replace('wadouri:', '');
+        }
+        if (cleanUrl.startsWith('http')) {
+          cleanUrls.push(cleanUrl);
+        }
+      });
+    }
+    
+    // Add fallback from dicom_url
+    if (study.dicom_url) {
+      let cleanUrl = study.dicom_url;
+      if (!cleanUrl.startsWith('http')) {
+        cleanUrl = `http://localhost:8000${cleanUrl}`;
+      }
+      if (!cleanUrls.includes(cleanUrl)) {
+        cleanUrls.push(cleanUrl);
+      }
+    }
+    
+    // Add fallback from filename
+    if (study.filename || study.original_filename) {
+      const filename = study.filename || study.original_filename;
+      const url = `http://localhost:8000/uploads/${study.patient_id}/${filename}`;
+      if (!cleanUrls.includes(url)) {
+        cleanUrls.push(url);
+      }
+    }
+    
+    console.log('🔧 [StudyViewer] Clean DICOM URLs for 3D:', cleanUrls);
+    return cleanUrls;
+  }
 
 
   useEffect(() => {
@@ -618,24 +679,128 @@ const StudyViewer: React.FC = () => {
         minHeight: 0,
         overflow: "hidden"
       }}>
-        {/* DICOM Viewer - Full Screen on Mobile, Left Side on Desktop */}
+        {/* DICOM Viewer with Tabs - Full Screen on Mobile, Left Side on Desktop */}
         <Box
           sx={{
             flex: 1,
             minHeight: { xs: "60vh", md: "calc(100vh - 120px)" },
             maxHeight: { xs: "60vh", md: "calc(100vh - 120px)" },
             overflow: "hidden",
-            order: { xs: 1, md: 0 }
+            order: { xs: 1, md: 0 },
+            display: "flex",
+            flexDirection: "column"
           }}
         >
           {study ? (
-            <MultiFrameDicomViewer
-              study={study}
-              onError={(error) => {
-                console.error("Advanced Medical DICOM Viewer Error:", error)
-                setError(`Advanced Medical DICOM Viewer Error: ${error}`)
-              }}
-            />
+            <>
+              {/* Viewer Tabs */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Tabs 
+                  value={viewerTab} 
+                  onChange={(_, newValue) => setViewerTab(newValue)}
+                  variant="fullWidth"
+                  sx={{ minHeight: 48 }}
+                >
+                  <Tab 
+                    icon={<TwoDIcon />} 
+                    label="2D Viewer" 
+                    sx={{ minHeight: 48, fontSize: '0.875rem' }}
+                  />
+                  <Tab 
+                    icon={<ThreeDIcon />} 
+                    label="3D Volume" 
+                    sx={{ minHeight: 48, fontSize: '0.875rem' }}
+                  />
+                  <Tab 
+                    icon={<ComprehensiveIcon />} 
+                    label="Comprehensive" 
+                    sx={{ minHeight: 48, fontSize: '0.875rem' }}
+                  />
+                  <Tab 
+                    icon={<SpeedIcon />} 
+                    label="Optimized" 
+                    sx={{ minHeight: 48, fontSize: '0.875rem' }}
+                  />
+                </Tabs>
+              </Box>
+
+              {/* Viewer Content */}
+              <Box sx={{ flex: 1, overflow: 'hidden' }}>
+                {viewerTab === 0 ? (
+                  <SimpleDicomViewer
+                    study={study}
+                    onError={(error) => {
+                      console.error("Simple DICOM Viewer Error:", error)
+                      setError(`Simple DICOM Viewer Error: ${error}`)
+                    }}
+                  />
+                ) : viewerTab === 1 ? (
+                  <MultiFrameDicomViewer
+                    study={study}
+                    onError={(error) => {
+                      console.error("MultiFrame DICOM Viewer Error:", error)
+                      setError(`MultiFrame DICOM Viewer Error: ${error}`)
+                    }}
+                  />
+                ) : viewerTab === 2 ? (
+                  <Box sx={{ height: '100%', position: 'relative' }}>
+                    <ThreeDViewer
+                      study={study}
+                      imageIds={getDicomImageIds(study)}
+                      settings={threeDSettings}
+                      onSettingsChange={setThreeDSettings}
+                    />
+                    {/* Debug info for development */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          bgcolor: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          p: 1,
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                          maxWidth: 300,
+                          zIndex: 1000
+                        }}
+                      >
+                        <Typography variant="caption" display="block">
+                          Study: {study.study_uid}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Patient: {study.patient_id}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          Available URLs: {getDicomImageIds(study).length}
+                        </Typography>
+                        <Typography variant="caption" display="block" sx={{ fontSize: '0.6rem', opacity: 0.8 }}>
+                          URLs: {getDicomImageIds(study).slice(0, 2).map(url => url.split('/').pop()).join(', ')}
+                          {getDicomImageIds(study).length > 2 && '...'}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                ) : viewerTab === 2 ? (
+                  <ComprehensiveDicomViewer
+                    study={study}
+                    onError={(error) => {
+                      console.error("Comprehensive DICOM Viewer Error:", error)
+                      setError(`Comprehensive DICOM Viewer Error: ${error}`)
+                    }}
+                  />
+                ) : (
+                  <OptimizedDicomViewer
+                    study={study}
+                    onError={(error) => {
+                      console.error("Optimized DICOM Viewer Error:", error)
+                      setError(`Optimized DICOM Viewer Error: ${error}`)
+                    }}
+                  />
+                )}
+              </Box>
+            </>
           ) : (
             <Box
               sx={{
@@ -942,6 +1107,36 @@ const StudyViewer: React.FC = () => {
                       </Button>
                     </Grid>
                   </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Performance Monitor Card */}
+              <Card sx={{ 
+                mb: 2, 
+                boxShadow: 1,
+                '&:hover': { boxShadow: 2 },
+                transition: 'box-shadow 0.2s'
+              }}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <SpeedIcon sx={{ mr: 1, color: "primary.main" }} />
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        Performance Monitor
+                      </Typography>
+                    </Box>
+                    <Button 
+                      size="small"
+                      variant={showPerformanceMonitor ? "contained" : "outlined"}
+                      onClick={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+                    >
+                      {showPerformanceMonitor ? "Hide" : "Show"}
+                    </Button>
+                  </Box>
+                  
+                  {showPerformanceMonitor && (
+                    <DicomPerformanceMonitor />
+                  )}
                 </CardContent>
               </Card>
             </Box>

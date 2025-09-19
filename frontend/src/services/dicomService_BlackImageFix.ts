@@ -65,7 +65,15 @@ class DicomServiceBlackImageFix {
         // Enhanced DICOM parsing options
         beforeSend: (xhr: XMLHttpRequest) => {
           xhr.setRequestHeader('Accept', 'application/dicom, image/jpeg, image/png, */*');
+          xhr.setRequestHeader('Cache-Control', 'no-cache');
           xhr.timeout = 30000; // 30 second timeout
+          // Enable credentials for CORS if needed
+          xhr.withCredentials = false;
+        },
+        // Add error handling for XMLHttpRequest
+        errorInterceptor: function (error: any) {
+          console.error('DICOM loading error intercepted:', error);
+          return error;
         }
       };
       

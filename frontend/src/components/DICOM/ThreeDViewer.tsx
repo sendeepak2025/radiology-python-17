@@ -30,18 +30,10 @@ import {
 } from '@mui/icons-material';
 import { Study } from '../../types';
 
-// Fix cornerstone imports with proper typing
-declare global {
-  interface Window {
-    cornerstone: {
-      loadImage: (imageId: string) => Promise<any>;
-      // Add other cornerstone methods as needed
-    };
-    cornerstoneWADOImageLoader: any;
-  }
-}
-
-const cornerstone = window.cornerstone;
+// Import cornerstone properly
+import * as cornerstone from 'cornerstone-core';
+import * as cornerstoneWADOImageLoader from 'cornerstone-wado-image-loader';
+import * as dicomParser from 'dicom-parser';
 
 interface ThreeDViewerProps {
   study: Study;
@@ -90,6 +82,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     zoom: 1,
     pan: { x: 0, y: 0 }
   });
+  const [cornerstoneInitialized, setCornerstoneInitialized] = useState(false);
 
   // Enhanced vertex shader for volume rendering
   const vertexShaderSource = `
@@ -241,7 +234,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   // Load and process DICOM images into volume data
   const loadVolumeData = useCallback(async () => {
     if (!imageIds || imageIds.length === 0) {
-      setError('No image IDs provided');
+      setError('No image URLs provided');
       return;
     }
 
@@ -249,28 +242,97 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       setIsLoading(true);
       setError('');
 
-      // Load all DICOM images
-      const images = await Promise.all(
-        imageIds.map((imageId: string) => cornerstone.loadImage(imageId))
-      );
+      console.log('🔧 [3DViewer] Loading DICOM images from URLs:', imageIds);
 
-      if (images.length === 0) {
-        throw new Error('No images loaded');
+      // Convert URLs to proper DICOM image IDs for cornerstone
+      // Use the same URL format that works for the 2D viewer
+      const dicomImageIds = imageIds.map((url: string) => {
+        console.log('🔧 [3DViewer] Processing URL:', url);
+
+        // If it's already a proper DICOM image ID, use it as is
+        if (url.startsWith('wadouri:') || url.startsWith('dicomweb:')) {
+          console.log('🔧 [3DViewer] Already a DICOM image ID:', url);
+          return url;
+        }
+        // For HTTP URLs that are already complete, add wadouri prefix
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          const dicomId = `wadouri:${url}`;
+          console.log('🔧 [3DViewer] Converted to DICOM ID:', dicomId);
+          return dicomId;
+        }
+        // This shouldn't happen with the new URL building logic, but keep as fallback
+        console.log('🔧 [3DViewer] Fallback conversion for:', url);
+        return `wadouri:${url}`;
+      });
+
+      console.log('🔧 [3DViewer] Final DICOM image IDs:', dicomImageIds);
+
+      // Load all DICOM images with error handling for each
+      const imagePromises = dicomImageIds.map(async (imageId: string, index: number) => {
+        try {
+          console.log(`Loading image ${index + 1}/${dicomImageIds.length}: ${imageId}`);
+          const image = await cornerstone.loadImage(imageId);
+          console.log(`Successfully loaded image ${index + 1}`);
+          return image;
+        } catch (error) {
+          console.group(`🔴 [ThreeDViewer] Failed to load image ${index + 1} (${imageId})`);
+          console.error('Error object:', error);
+          console.error('Error type:', typeof error);
+          console.error('Error name:', (error as any)?.name);
+          console.error('Error message:', (error as any)?.message);
+          console.error('Error stack:', (error as any)?.stack);
+          
+          // Log all error properties
+          if (error && typeof error === 'object') {
+            const errorProps = Object.getOwnPropertyNames(error);
+            console.log('All error properties:', errorProps);
+            errorProps.forEach(prop => {
+              try {
+                console.log(`- ${prop}:`, (error as any)[prop]);
+              } catch (e) {
+                console.log(`- ${prop}: Unable to access`);
+              }
+            });
+          }
+          
+          console.groupEnd();
+          throw error;
+        }
+      });
+
+      const images = await Promise.allSettled(imagePromises);
+      const successfulImages = images
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value);
+
+      const failedCount = images.length - successfulImages.length;
+      if (failedCount > 0) {
+        console.warn(`${failedCount} out of ${images.length} images failed to load`);
       }
 
+      if (successfulImages.length === 0) {
+        throw new Error(`No images could be loaded from ${imageIds.length} sources. This might be due to CORS issues, incorrect MIME types, or the files not being valid DICOM files.`);
+      }
+
+      if (successfulImages.length < 3) {
+        console.warn(`Only ${successfulImages.length} images loaded - 3D volume rendering works best with multiple slices`);
+      }
+
+      console.log(`Successfully loaded ${successfulImages.length} out of ${imageIds.length} images`);
+
       // Extract volume dimensions and spacing
-      const firstImage = images[0];
+      const firstImage = successfulImages[0];
       const dimensions = {
         width: firstImage.width,
         height: firstImage.height,
-        depth: images.length
+        depth: successfulImages.length
       };
 
       const spacing = {
         x: firstImage.columnPixelSpacing || 1.0,
         y: firstImage.rowPixelSpacing || 1.0,
-        z: images.length > 1 ? Math.abs(
-          (images[1].imagePositionPatient?.[2] || 0) - 
+        z: successfulImages.length > 1 ? Math.abs(
+          (successfulImages[1].imagePositionPatient?.[2] || 0) -
           (firstImage.imagePositionPatient?.[2] || 0)
         ) || 1.0 : 1.0
       };
@@ -278,15 +340,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       // Create volume data array
       const totalVoxels = dimensions.width * dimensions.height * dimensions.depth;
       const volumeArray = new Uint16Array(totalVoxels);
-      
+
       let minValue = Infinity;
       let maxValue = -Infinity;
 
       // Copy pixel data from all images
-      images.forEach((image: any, sliceIndex: number) => {
+      successfulImages.forEach((image: any, sliceIndex: number) => {
         const pixelData = image.getPixelData();
         const sliceOffset = sliceIndex * dimensions.width * dimensions.height;
-        
+
         for (let i = 0; i < pixelData.length; i++) {
           const value = pixelData[i];
           volumeArray[sliceOffset + i] = value;
@@ -304,7 +366,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       };
 
       setVolumeData(volume);
-      
+
       // Update settings with appropriate window/level
       onSettingsChange({
         ...settings,
@@ -326,23 +388,23 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     if (!texture) return null;
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    
+
     // Create 2D texture atlas from 3D volume
     const { width, height, depth } = volume.dimensions;
     const atlasWidth = width * depth;
     const atlasHeight = height;
-    
+
     // Convert Uint16 to Uint8 for WebGL compatibility
     const normalizedData = new Uint8Array(atlasWidth * atlasHeight);
     const range = volume.maxValue - volume.minValue;
-    
+
     for (let z = 0; z < depth; z++) {
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           const volumeIndex = z * width * height + y * width + x;
           const atlasIndex = y * atlasWidth + z * width + x;
-          
-          const normalizedValue = range > 0 ? 
+
+          const normalizedValue = range > 0 ?
             ((volume.data[volumeIndex] - volume.minValue) / range) * 255 : 0;
           normalizedData[atlasIndex] = Math.floor(normalizedValue);
         }
@@ -367,38 +429,36 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   const createShader = useCallback((gl: WebGLRenderingContext, type: number, source: string) => {
     const shader = gl.createShader(type);
     if (!shader) return null;
-    
+
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
-    
+
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
       gl.deleteShader(shader);
       return null;
     }
-    
+
     return shader;
   }, []);
 
   const createProgram = useCallback((gl: WebGLRenderingContext) => {
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-    
+
     if (!vertexShader || !fragmentShader) return null;
-    
+
     const program = gl.createProgram();
     if (!program) return null;
-    
+
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
-    
+
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error('Program linking error:', gl.getProgramInfoLog(program));
       gl.deleteProgram(program);
       return null;
     }
-    
+
     return program;
   }, [createShader, vertexShaderSource, fragmentShaderSource]);
 
@@ -406,26 +466,26 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   const createCubeGeometry = useCallback(() => {
     const vertices = new Float32Array([
       // Front face
-      -1, -1,  1,   1, -1,  1,   1,  1,  1,  -1,  1,  1,
+      -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1,
       // Back face
-      -1, -1, -1,  -1,  1, -1,   1,  1, -1,   1, -1, -1,
+      -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1,
       // Top face
-      -1,  1, -1,  -1,  1,  1,   1,  1,  1,   1,  1, -1,
+      -1, 1, -1, -1, 1, 1, 1, 1, 1, 1, 1, -1,
       // Bottom face
-      -1, -1, -1,   1, -1, -1,   1, -1,  1,  -1, -1,  1,
+      -1, -1, -1, 1, -1, -1, 1, -1, 1, -1, -1, 1,
       // Right face
-       1, -1, -1,   1,  1, -1,   1,  1,  1,   1, -1,  1,
+      1, -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1,
       // Left face
-      -1, -1, -1,  -1, -1,  1,  -1,  1,  1,  -1,  1, -1
+      -1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1
     ]);
 
     const indices = new Uint16Array([
-      0,  1,  2,    0,  2,  3,    // front
-      4,  5,  6,    4,  6,  7,    // back
-      8,  9,  10,   8,  10, 11,   // top
-      12, 13, 14,   12, 14, 15,   // bottom
-      16, 17, 18,   16, 18, 19,   // right
-      20, 21, 22,   20, 22, 23    // left
+      0, 1, 2, 0, 2, 3,    // front
+      4, 5, 6, 4, 6, 7,    // back
+      8, 9, 10, 8, 10, 11,   // top
+      12, 13, 14, 12, 14, 15,   // bottom
+      16, 17, 18, 16, 18, 19,   // right
+      20, 21, 22, 20, 22, 23    // left
     ]);
 
     return { vertices, indices };
@@ -442,55 +502,52 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     }
 
     glRef.current = gl;
-    
+
     // Enable extensions
     const ext = gl.getExtension('OES_texture_float');
-    if (!ext) {
-      console.warn('OES_texture_float not supported');
-    }
-    
+
     // Enable depth testing and blending
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    
+
     const program = createProgram(gl);
     if (!program) {
       setError('Failed to create WebGL program');
       return;
     }
-    
+
     programRef.current = program;
     gl.useProgram(program);
-    
+
     // Create and bind geometry
     const geometry = createCubeGeometry();
-    
+
     const vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, geometry.vertices, gl.STATIC_DRAW);
-    
+
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
-    
+
     const positionLocation = gl.getAttribLocation(program, 'a_position');
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-    
+
     // Create volume texture
     const volumeTexture = createVolumeTexture(gl, volumeData);
     if (!volumeTexture) {
       setError('Failed to create volume texture');
       return;
     }
-    
+
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, volumeTexture);
-    
+
     const textureLocation = gl.getUniformLocation(program, 'u_volumeTexture');
     gl.uniform1i(textureLocation, 0);
-    
+
     setIsLoading(false);
     render();
   }, [volumeData, createProgram, createCubeGeometry, createVolumeTexture]);
@@ -503,15 +560,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
 
     // Set viewport
     gl.viewport(0, 0, canvas.width, canvas.height);
-    
+
     // Clear canvas
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    
+
     // Create matrices
     const modelViewMatrix = createModelViewMatrix();
     const projectionMatrix = createProjectionMatrix(canvas.width / canvas.height);
-    
+
     // Set uniforms
     const modelViewLocation = gl.getUniformLocation(program, 'u_modelViewMatrix');
     const projectionLocation = gl.getUniformLocation(program, 'u_projectionMatrix');
@@ -524,7 +581,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     const renderModeLocation = gl.getUniformLocation(program, 'u_renderMode');
     const colorMapLocation = gl.getUniformLocation(program, 'u_colorMap');
     const stepSizeLocation = gl.getUniformLocation(program, 'u_stepSize');
-    
+
     gl.uniformMatrix4fv(modelViewLocation, false, modelViewMatrix);
     gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
     gl.uniform3f(volumeDimensionsLocation, volumeData.dimensions.width, volumeData.dimensions.height, volumeData.dimensions.depth);
@@ -533,20 +590,20 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     gl.uniform1f(thresholdLocation, settings.threshold);
     gl.uniform1f(windowWidthLocation, settings.windowWidth);
     gl.uniform1f(windowCenterLocation, settings.windowCenter);
-    
+
     const renderModeMap = { volume: 0, mip: 1, surface: 2, raycast: 3 };
     gl.uniform1i(renderModeLocation, renderModeMap[settings.renderMode]);
-    
+
     const colorMapMap = { grayscale: 0, hot: 1, cool: 2, bone: 3 };
     gl.uniform1i(colorMapLocation, colorMapMap[settings.colorMap]);
-    
+
     // Adaptive step size based on quality vs performance
     const stepSize = isInteracting ? 0.01 : 0.005;
     gl.uniform1f(stepSizeLocation, stepSize);
-    
+
     // Draw
     gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
-    
+
     if (!isInteracting) {
       animationRef.current = requestAnimationFrame(render);
     }
@@ -555,36 +612,36 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   // Enhanced matrix creation with proper rotations
   const createModelViewMatrix = () => {
     const matrix = new Float32Array(16);
-    
+
     // Identity matrix
     matrix[0] = 1; matrix[5] = 1; matrix[10] = 1; matrix[15] = 1;
-    
+
     // Apply transformations
     const { rotation, zoom, pan } = viewport;
-    
+
     // Translation
     matrix[12] = pan.x;
     matrix[13] = pan.y;
     matrix[14] = -5 / zoom;
-    
+
     // Apply rotations (simplified)
     const cosX = Math.cos(rotation.x * Math.PI / 180);
     const sinX = Math.sin(rotation.x * Math.PI / 180);
     const cosY = Math.cos(rotation.y * Math.PI / 180);
     const sinY = Math.sin(rotation.y * Math.PI / 180);
-    
+
     // Rotation around Y axis
     matrix[0] = cosY;
     matrix[2] = sinY;
     matrix[8] = -sinY;
     matrix[10] = cosY;
-    
+
     // Rotation around X axis
     matrix[5] = cosX;
     matrix[6] = -sinX;
     matrix[9] = sinX;
     matrix[10] *= cosX;
-    
+
     return matrix;
   };
 
@@ -593,16 +650,16 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     const fov = Math.PI / 4;
     const near = 0.1;
     const far = 100;
-    
+
     const f = Math.tan(Math.PI * 0.5 - 0.5 * fov);
     const rangeInv = 1.0 / (near - far);
-    
+
     matrix[0] = f / aspectRatio;
     matrix[5] = f;
     matrix[10] = (near + far) * rangeInv;
     matrix[11] = -1;
     matrix[14] = near * far * rangeInv * 2;
-    
+
     return matrix;
   };
 
@@ -660,19 +717,90 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
     }));
   }, []);
 
-  // Load volume data when imageIds change
+  // Initialize cornerstone
   useEffect(() => {
-    if (imageIds && imageIds.length > 0) {
+    const initCornerstone = async () => {
+      try {
+        console.log('🔧 [ThreeDViewer] Initializing cornerstone...');
+
+        // Initialize WADO Image Loader
+        if (typeof (cornerstoneWADOImageLoader as any).external === 'function') {
+          (cornerstoneWADOImageLoader as any).external({
+            cornerstone: cornerstone,
+            dicomParser: dicomParser
+          });
+        } else {
+          // Fallback to old API
+          (cornerstoneWADOImageLoader as any).external.cornerstone = cornerstone;
+          (cornerstoneWADOImageLoader as any).external.dicomParser = dicomParser;
+        }
+
+        // Configure WADO Image Loader
+        const config = {
+          maxWebWorkers: 0, // Disable web workers for 3D viewer
+          startWebWorkersOnDemand: false,
+          webWorkerPath: '/cornerstoneWADOImageLoaderWebWorker.js',
+          taskConfiguration: {
+            decodeTask: {
+              initializeCodecsOnStartup: false,
+              usePDFJS: false,
+              strict: false
+            }
+          },
+          beforeSend: function (xhr: XMLHttpRequest) {
+            // Set proper headers for DICOM files
+            xhr.setRequestHeader('Accept', 'application/dicom, */*');
+            xhr.setRequestHeader('Cache-Control', 'no-cache');
+            // Set timeout to prevent hanging requests
+            xhr.timeout = 30000; // 30 seconds
+            // Enable credentials for CORS if needed
+            xhr.withCredentials = false;
+          },
+          // Add error handling for XMLHttpRequest
+          errorInterceptor: function (error: any) {
+            console.error('DICOM loading error intercepted:', error);
+            return error;
+          }
+        };
+
+        (cornerstoneWADOImageLoader as any).configure(config);
+
+        console.log('✅ [ThreeDViewer] Cornerstone initialized');
+        setCornerstoneInitialized(true);
+      } catch (error) {
+        console.error('❌ [ThreeDViewer] Failed to initialize cornerstone:', error);
+        setError(`Failed to initialize DICOM loader: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    };
+
+    initCornerstone();
+  }, []);
+
+  // Load volume data when imageIds change and cornerstone is ready
+  useEffect(() => {
+    console.log('🔧 [ThreeDViewer] Effect triggered:', {
+      cornerstoneInitialized,
+      imageIds: imageIds?.length || 0,
+      imageIdsArray: imageIds
+    });
+    
+    if (cornerstoneInitialized && imageIds && imageIds.length > 0) {
+      console.log('🔧 [ThreeDViewer] Starting volume data load...');
       loadVolumeData();
+    } else {
+      console.log('🔧 [ThreeDViewer] Conditions not met for loading:', {
+        cornerstoneInitialized,
+        hasImageIds: !!(imageIds && imageIds.length > 0)
+      });
     }
-  }, [imageIds, loadVolumeData]);
+  }, [imageIds, loadVolumeData, cornerstoneInitialized]);
 
   // Initialize WebGL when volume data is ready
   useEffect(() => {
     if (volumeData) {
       initWebGL();
     }
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -708,7 +836,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
   const handleScreenshot = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const link = document.createElement('a');
     link.download = `3d-view-${study.study_uid}-${Date.now()}.png`;
     link.href = canvas.toDataURL();
@@ -717,9 +845,88 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        3D Rendering Error: {error}
-      </Alert>
+      <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Alert severity="error">
+          <Typography variant="h6" gutterBottom>
+            3D Rendering Error
+          </Typography>
+          <Typography variant="body2" gutterBottom>
+            {error}
+          </Typography>
+          {imageIds && imageIds.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="caption" display="block" gutterBottom>
+                Attempted to load {imageIds.length} DICOM files:
+              </Typography>
+              <Box sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'rgba(0,0,0,0.1)', p: 1, borderRadius: 1 }}>
+                {imageIds.slice(0, 10).map((imageId, index) => (
+                  <Typography key={index} variant="caption" display="block" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                    {index + 1}. {imageId}
+                  </Typography>
+                ))}
+                {imageIds.length > 10 && (
+                  <Typography variant="caption" display="block" sx={{ fontStyle: 'italic' }}>
+                    ... and {imageIds.length - 10} more files
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+        </Alert>
+
+        <Alert severity="info">
+          <Typography variant="body2" gutterBottom>
+            <strong>Troubleshooting Tips:</strong>
+          </Typography>
+          <Typography variant="body2" component="div">
+            • Ensure DICOM files are properly uploaded and accessible
+            <br />
+            • Check that files are served with correct MIME type (application/dicom)
+            <br />
+            • Verify that cornerstone.js and WADO image loader are properly initialized
+            <br />
+            • 3D volume rendering requires multiple DICOM slices from the same series
+            <br />
+            • Try switching back to 2D viewer for single images or different file types
+          </Typography>
+        </Alert>
+
+        <Alert severity="warning">
+          <Typography variant="body2">
+            <strong>Note:</strong> The 3D viewer is designed for volumetric DICOM series (CT, MRI with multiple slices).
+            For single images or 2D studies, use the 2D viewer tab above.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  // Show fallback if no images or not initialized
+  if (!imageIds || imageIds.length === 0) {
+    return (
+      <Box sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Alert severity="info">
+          <Typography variant="h6" gutterBottom>
+            No DICOM Images Available
+          </Typography>
+          <Typography variant="body2">
+            The 3D viewer requires DICOM images to render. Please ensure DICOM files are properly uploaded and try switching to the 2D viewer.
+          </Typography>
+        </Alert>
+      </Box>
+    );
+  }
+
+  if (!cornerstoneInitialized) {
+    return (
+      <Box sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Initializing 3D DICOM Viewer...
+          </Typography>
+        </Box>
+      </Box>
     );
   }
 
@@ -734,8 +941,8 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 <InputLabel>Render Mode</InputLabel>
                 <Select
                   value={settings.renderMode}
-                  onChange={(e) => onSettingsChange({ 
-                    ...settings, 
+                  onChange={(e) => onSettingsChange({
+                    ...settings,
                     renderMode: e.target.value as 'volume' | 'mip' | 'surface' | 'raycast'
                   })}
                 >
@@ -746,14 +953,14 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={12} sm={6} md={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Color Map</InputLabel>
                 <Select
                   value={settings.colorMap}
-                  onChange={(e) => onSettingsChange({ 
-                    ...settings, 
+                  onChange={(e) => onSettingsChange({
+                    ...settings,
                     colorMap: e.target.value as 'grayscale' | 'hot' | 'cool' | 'bone'
                   })}
                 >
@@ -764,15 +971,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 </Select>
               </FormControl>
             </Grid>
-            
+
             <Grid item xs={6} sm={3} md={2}>
               <Typography variant="caption">Opacity</Typography>
               <Slider
                 size="small"
                 value={settings.opacity}
-                onChange={(_, value) => onSettingsChange({ 
-                  ...settings, 
-                  opacity: value as number 
+                onChange={(_, value) => onSettingsChange({
+                  ...settings,
+                  opacity: value as number
                 })}
                 min={0}
                 max={1}
@@ -780,15 +987,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 valueLabelDisplay="auto"
               />
             </Grid>
-            
+
             <Grid item xs={6} sm={3} md={2}>
               <Typography variant="caption">Threshold</Typography>
               <Slider
                 size="small"
                 value={settings.threshold}
-                onChange={(_, value) => onSettingsChange({ 
-                  ...settings, 
-                  threshold: value as number 
+                onChange={(_, value) => onSettingsChange({
+                  ...settings,
+                  threshold: value as number
                 })}
                 min={0}
                 max={1}
@@ -796,15 +1003,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 valueLabelDisplay="auto"
               />
             </Grid>
-            
+
             <Grid item xs={6} sm={3} md={2}>
               <Typography variant="caption">Window Width</Typography>
               <Slider
                 size="small"
                 value={settings.windowWidth}
-                onChange={(_, value) => onSettingsChange({ 
-                  ...settings, 
-                  windowWidth: value as number 
+                onChange={(_, value) => onSettingsChange({
+                  ...settings,
+                  windowWidth: value as number
                 })}
                 min={1}
                 max={4000}
@@ -812,15 +1019,15 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 valueLabelDisplay="auto"
               />
             </Grid>
-            
+
             <Grid item xs={6} sm={3} md={2}>
               <Typography variant="caption">Window Center</Typography>
               <Slider
                 size="small"
                 value={settings.windowCenter}
-                onChange={(_, value) => onSettingsChange({ 
-                  ...settings, 
-                  windowCenter: value as number 
+                onChange={(_, value) => onSettingsChange({
+                  ...settings,
+                  windowCenter: value as number
                 })}
                 min={-1000}
                 max={3000}
@@ -828,7 +1035,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
                 valueLabelDisplay="auto"
               />
             </Grid>
-            
+
             <Grid item xs={12} md={12}>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Tooltip title="Rotate Left">
@@ -879,7 +1086,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
 
       {/* Enhanced 3D Canvas */}
       <Box sx={{ flex: 1, position: 'relative', bgcolor: 'black' }}>
-        {isLoading && (
+        {(isLoading || !cornerstoneInitialized) && (
           <Box
             sx={{
               position: 'absolute',
@@ -892,11 +1099,11 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           >
             <CircularProgress />
             <Typography variant="body2" sx={{ mt: 1, color: 'white' }}>
-              Loading DICOM Volume Data...
+              {!cornerstoneInitialized ? 'Initializing DICOM Loader...' : 'Loading DICOM Volume Data...'}
             </Typography>
           </Box>
         )}
-        
+
         <canvas
           ref={canvasRef}
           width={800}
@@ -910,7 +1117,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
           onMouseDown={handleMouseDown}
           onWheel={handleWheel}
         />
-        
+
         {/* Enhanced Overlay Info */}
         <Box
           sx={{
@@ -936,7 +1143,7 @@ const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
             </Typography>
           )}
         </Box>
-        
+
         {/* Interaction Help */}
         <Box
           sx={{

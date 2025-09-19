@@ -93,6 +93,74 @@ class DicomService {
         useWebWorkers: false, // Disable for immediate startup
         webWorkerTaskPaths: [],
         maxWebWorkerTasks: 0,
+        // Add proper XMLHttpRequest configuration
+        beforeSend: function (xhr: XMLHttpRequest) {
+          // Set proper headers for DICOM files
+          xhr.setRequestHeader('Accept', 'application/dicom, */*');
+          xhr.setRequestHeader('Cache-Control', 'no-cache');
+          // Set timeout to prevent hanging requests
+          xhr.timeout = 30000; // 30 seconds
+          // Enable credentials for CORS if needed
+          xhr.withCredentials = false;
+        },
+        // Add error handling for XMLHttpRequest
+        errorInterceptor: function (error: any) {
+          console.group('🔴 DICOM Loading Error Intercepted');
+          console.error('Error object:', error);
+          
+          // Log XMLHttpRequest specific details
+          if (error && error.request) {
+            const xhr = error.request;
+            console.log('XMLHttpRequest Details:');
+            console.log('- Status:', xhr.status);
+            console.log('- Status Text:', xhr.statusText);
+            console.log('- Ready State:', xhr.readyState);
+            console.log('- Response URL:', xhr.responseURL);
+            console.log('- Response Type:', xhr.responseType);
+            console.log('- Timeout:', xhr.timeout);
+            console.log('- With Credentials:', xhr.withCredentials);
+            
+            // Log response headers if available
+            try {
+              const responseHeaders = xhr.getAllResponseHeaders();
+              console.log('- Response Headers:', responseHeaders);
+            } catch (e) {
+              console.log('- Response Headers: Unable to retrieve');
+            }
+            
+            // Log response text/data if available
+            try {
+              if (xhr.responseText) {
+                console.log('- Response Text (first 200 chars):', xhr.responseText.substring(0, 200));
+              }
+            } catch (e) {
+              console.log('- Response Text: Unable to retrieve');
+            }
+          }
+          
+          // Log error properties
+          if (error) {
+            console.log('Error Properties:');
+            console.log('- Message:', error.message);
+            console.log('- Name:', error.name);
+            console.log('- Stack:', error.stack);
+            console.log('- Type:', typeof error);
+            
+            // Log all enumerable properties
+            const errorProps = Object.getOwnPropertyNames(error);
+            console.log('- All Properties:', errorProps);
+            errorProps.forEach(prop => {
+              try {
+                console.log(`  - ${prop}:`, error[prop]);
+              } catch (e) {
+                console.log(`  - ${prop}: Unable to access`);
+              }
+            });
+          }
+          
+          console.groupEnd();
+          return error;
+        }
       };
 
       cornerstoneWADOImageLoader.configure(config);
@@ -105,6 +173,21 @@ class DicomService {
             maxWebWorkers: Math.min(navigator.hardwareConcurrency || 2, 2),
             useWebWorkers: true,
             maxWebWorkerTasks: 20,
+            // Ensure XMLHttpRequest configuration is preserved
+            beforeSend: function (xhr: XMLHttpRequest) {
+              // Set proper headers for DICOM files
+              xhr.setRequestHeader('Accept', 'application/dicom, */*');
+              xhr.setRequestHeader('Cache-Control', 'no-cache');
+              // Set timeout to prevent hanging requests
+              xhr.timeout = 30000; // 30 seconds
+              // Enable credentials for CORS if needed
+              xhr.withCredentials = false;
+            },
+            // Add error handling for XMLHttpRequest
+            errorInterceptor: function (error: any) {
+              console.error('DICOM loading error intercepted:', error);
+              return error;
+            }
           };
           cornerstoneWADOImageLoader.configure(enhancedConfig);
           this.initializePreloadWorkers();
@@ -280,6 +363,28 @@ class DicomService {
       return image;
       
     } catch (error) {
+      console.group('🔴 [DicomService] Error in performSingleImageLoad');
+      console.error('Image ID:', imageId);
+      console.error('Error object:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error name:', (error as any)?.name);
+      console.error('Error message:', (error as any)?.message);
+      console.error('Error stack:', (error as any)?.stack);
+      
+      // Log all error properties
+      if (error && typeof error === 'object') {
+        const errorProps = Object.getOwnPropertyNames(error);
+        console.log('All error properties:', errorProps);
+        errorProps.forEach(prop => {
+          try {
+            console.log(`- ${prop}:`, (error as any)[prop]);
+          } catch (e) {
+            console.log(`- ${prop}: Unable to access`);
+          }
+        });
+      }
+      
+      console.groupEnd();
       throw this.enhanceError(error, imageId);
     }
   }
