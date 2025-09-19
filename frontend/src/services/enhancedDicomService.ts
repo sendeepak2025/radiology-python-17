@@ -3,7 +3,7 @@
  * Provides optimized image loading, caching, and processing capabilities
  */
 
-import { apiService } from './api';
+import { api } from './api';
 
 export interface DicomMetadata {
   patient_id: string;
@@ -64,7 +64,7 @@ export class EnhancedDicomService {
     }
 
     try {
-      const response = await apiService.get(`/dicom/metadata/${patientId}/${filename}`);
+      const response = await api.get(`/dicom/metadata/${patientId}/${filename}`);
       
       if (response.data.success) {
         const metadata = response.data.metadata;
@@ -127,7 +127,7 @@ export class EnhancedDicomService {
       if (height) params.append('height', height.toString());
       if (useCache !== undefined) params.append('use_cache', useCache.toString());
 
-      const response = await apiService.get(
+      const response = await api.get(
         `/dicom/process/${patientId}/${filename}?${params.toString()}`
       );
 
@@ -169,7 +169,7 @@ export class EnhancedDicomService {
     }
 
     try {
-      const response = await apiService.get(
+      const response = await api.get(
         `/dicom/thumbnail/${patientId}/${filename}?size=${size}`
       );
 
@@ -229,7 +229,7 @@ export class EnhancedDicomService {
    */
   async getCacheStats(): Promise<CacheStats> {
     try {
-      const response = await apiService.get('/cache/stats');
+      const response = await api.get('/cache/stats');
       
       if (response.data.success) {
         return response.data.cache_stats;
@@ -248,7 +248,7 @@ export class EnhancedDicomService {
   async clearCache(filePath?: string): Promise<void> {
     try {
       const params = filePath ? `?file_path=${encodeURIComponent(filePath)}` : '';
-      const response = await apiService.delete(`/cache/clear${params}`);
+      const response = await api.delete(`/cache/clear${params}`);
       
       if (response.data.success) {
         // Clear local caches too

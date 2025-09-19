@@ -88,8 +88,14 @@ const StudyViewer: React.FC = () => {
   const [urgentFindings, setUrgentFindings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile)
   const [useSimpleViewer, setUseSimpleViewer] = useState(true) // Start with simple viewer
-  const [viewerTab, setViewerTab] = useState(0) // 0 = Simple, 1 = MultiFrame, 2 = 3D, 3 = Comprehensive, 4 = Optimized
+  const [viewerTab, setViewerTab] = useState(0) // 0 = MultiFrame (Working), 1 = Simple, 2 = 3D, 3 = Comprehensive, 4 = Optimized
   const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
+  const [showCreateReportDialog, setShowCreateReportDialog] = useState(false)
+  const [collaborationMode, setCollaborationMode] = useState(false)
+  const [aiAssistanceEnabled, setAiAssistanceEnabled] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [workflowStatus, setWorkflowStatus] = useState('in_progress')
+  const [securityLevel, setSecurityLevel] = useState('standard')
   const [threeDSettings, setThreeDSettings] = useState({
     renderMode: 'volume' as 'volume' | 'mip' | 'surface' | 'raycast',
     opacity: 0.8,
@@ -206,7 +212,40 @@ const StudyViewer: React.FC = () => {
 
   const handleCreateReport = () => {
     console.log("Create report for study:", studyUid)
-    // TODO: Implement report creation
+    setShowCreateReportDialog(true)
+  }
+
+  const handleCloseCreateReportDialog = () => {
+    setShowCreateReportDialog(false)
+  }
+
+  const handleToggleCollaboration = () => {
+    setCollaborationMode(!collaborationMode)
+    console.log("Collaboration mode:", !collaborationMode)
+  }
+
+  const handleToggleAI = () => {
+    setAiAssistanceEnabled(!aiAssistanceEnabled)
+    console.log("AI assistance:", !aiAssistanceEnabled)
+  }
+
+  const handleToggleNotifications = () => {
+    setNotificationsEnabled(!notificationsEnabled)
+    console.log("Notifications:", !notificationsEnabled)
+  }
+
+  const handleWorkflowUpdate = (status: string) => {
+    setWorkflowStatus(status)
+    console.log("Workflow status updated:", status)
+  }
+
+  const handleSecurityToggle = () => {
+    setSecurityLevel(securityLevel === 'standard' ? 'high' : 'standard')
+    console.log("Security level:", securityLevel === 'standard' ? 'high' : 'standard')
+  }
+
+  const handleMenuToggle = () => {
+    setSidebarOpen(!sidebarOpen)
   }
 
 
@@ -456,6 +495,44 @@ const StudyViewer: React.FC = () => {
 
               {/* Secondary Actions */}
               <Box sx={{ display: "flex", gap: 0.5 }}>
+                <Tooltip title="AI Assistance">
+                  <IconButton 
+                    onClick={handleToggleAI} 
+                    size="small"
+                    color={aiAssistanceEnabled ? "primary" : "default"}
+                  >
+                    <AIIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Collaboration Mode">
+                  <IconButton 
+                    onClick={handleToggleCollaboration} 
+                    size="small"
+                    color={collaborationMode ? "primary" : "default"}
+                  >
+                    <GroupIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Notifications">
+                  <IconButton 
+                    onClick={handleToggleNotifications} 
+                    size="small"
+                    color={notificationsEnabled ? "primary" : "default"}
+                  >
+                    <Badge color="error" variant="dot" invisible={!notificationsEnabled}>
+                      <NotificationIcon />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Security Level">
+                  <IconButton 
+                    onClick={handleSecurityToggle} 
+                    size="small"
+                    color={securityLevel === 'high' ? "error" : "default"}
+                  >
+                    <LockIcon />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Share Study">
                   <IconButton onClick={handleShare} size="small">
                     <ShareIcon />
@@ -481,7 +558,97 @@ const StudyViewer: React.FC = () => {
                     <EmailIcon />
                   </IconButton>
                 </Tooltip>
+                <Tooltip title="Menu">
+                  <IconButton onClick={handleMenuToggle} size="small">
+                    <MenuIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Workflow Status Bar */}
+      <Paper sx={{ p: 1.5, mb: 1, bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Tooltip title="Workflow Status">
+                <Chip
+                  icon={workflowStatus === 'completed' ? <CheckIcon /> : <ScheduleIcon />}
+                  label={`Status: ${workflowStatus.replace('_', ' ').toUpperCase()}`}
+                  color={workflowStatus === 'completed' ? 'success' : workflowStatus === 'in_progress' ? 'warning' : 'default'}
+                  size="small"
+                />
+              </Tooltip>
+              {aiAssistanceEnabled && (
+                <Tooltip title="AI Analysis Active">
+                  <Chip
+                    icon={<PsychologyIcon />}
+                    label="AI Assist"
+                    color="secondary"
+                    size="small"
+                    sx={{ animation: "pulse 2s infinite" }}
+                  />
+                </Tooltip>
+              )}
+              {collaborationMode && (
+                <Tooltip title="Collaboration Active">
+                  <Chip
+                    icon={<GroupIcon />}
+                    label="Live Collaboration"
+                    color="info"
+                    size="small"
+                  />
+                </Tooltip>
+              )}
+              <Tooltip title="Performance Trending">
+                <Chip
+                  icon={<TrendingIcon />}
+                  label="Performance"
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+                />
+              </Tooltip>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+              {collaborationMode && (
+                <>
+                  <Tooltip title="Video Call">
+                    <IconButton size="small" color="primary">
+                      <VideoCallIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Chat">
+                    <IconButton size="small" color="primary">
+                      <ChatIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Add Collaborator">
+                    <IconButton size="small" color="primary">
+                      <PersonAddIcon />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+              <Tooltip title="Assessment Tools">
+                <IconButton size="small" color="secondary">
+                  <AssessmentIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Privacy Mode">
+                <IconButton 
+                  size="small" 
+                  color={securityLevel === 'high' ? "error" : "default"}
+                  onClick={handleSecurityToggle}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Grid>
         </Grid>
@@ -671,14 +838,206 @@ const StudyViewer: React.FC = () => {
         </Grid>
       </Paper>
 
+      {/* Performance Monitor */}
+      {showPerformanceMonitor && (
+        <Paper sx={{ p: 2, mb: 2, bgcolor: alpha(theme.palette.info.main, 0.05) }}>
+          <DicomPerformanceMonitor />
+        </Paper>
+      )}
+
       {/* Responsive Main Content Area */}
       <Box sx={{ 
         flexGrow: 1, 
         display: "flex", 
         flexDirection: { xs: "column", md: "row" },
         minHeight: 0,
-        overflow: "hidden"
+        overflow: "hidden",
+        position: "relative"
       }}>
+        {/* Comprehensive Sidebar */}
+        <Drawer
+          variant={isMobile ? "temporary" : "persistent"}
+          anchor="right"
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          sx={{
+            width: sidebarOpen ? 320 : 0,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: 320,
+              boxSizing: 'border-box',
+              position: 'relative',
+              height: 'auto',
+              bgcolor: alpha(theme.palette.background.paper, 0.95),
+              borderLeft: `1px solid ${theme.palette.divider}`,
+            },
+          }}
+        >
+          <Box sx={{ p: 2, height: '100%', overflow: 'auto' }}>
+            {/* Sidebar Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" color="primary">
+                Study Tools
+              </Typography>
+              <IconButton size="small" onClick={() => setSidebarOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <Divider sx={{ mb: 2 }} />
+
+            {/* AI Analysis Section */}
+            {aiAssistanceEnabled && (
+              <Card sx={{ mb: 2, bgcolor: alpha(theme.palette.secondary.main, 0.05) }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <PsychologyIcon color="secondary" sx={{ mr: 1 }} />
+                    <Typography variant="subtitle2" color="secondary">
+                      AI Analysis
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    AI-powered analysis is active for this study.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip label="Anomaly Detection" size="small" color="secondary" />
+                    <Chip label="Measurement" size="small" color="secondary" />
+                    <Chip label="Comparison" size="small" color="secondary" />
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Collaboration Section */}
+            {collaborationMode && (
+              <Card sx={{ mb: 2, bgcolor: alpha(theme.palette.info.main, 0.05) }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <GroupIcon color="info" sx={{ mr: 1 }} />
+                    <Typography variant="subtitle2" color="info">
+                      Live Collaboration
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    3 collaborators online
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>DR</Avatar>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>RT</Avatar>
+                    <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>RN</Avatar>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button size="small" startIcon={<VideoCallIcon />} variant="outlined">
+                      Join Call
+                    </Button>
+                    <Button size="small" startIcon={<ChatIcon />} variant="outlined">
+                      Chat
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Workflow Management */}
+            <Card sx={{ mb: 2 }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <ScheduleIcon color="primary" sx={{ mr: 1 }} />
+                  <Typography variant="subtitle2" color="primary">
+                    Workflow
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    size="small"
+                    variant={workflowStatus === 'reading' ? 'contained' : 'outlined'}
+                    onClick={() => handleWorkflowUpdate('reading')}
+                    fullWidth
+                  >
+                    Start Reading
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={workflowStatus === 'reporting' ? 'contained' : 'outlined'}
+                    onClick={() => handleWorkflowUpdate('reporting')}
+                    fullWidth
+                  >
+                    Create Report
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={workflowStatus === 'completed' ? 'contained' : 'outlined'}
+                    onClick={() => handleWorkflowUpdate('completed')}
+                    fullWidth
+                    startIcon={<CheckIcon />}
+                  >
+                    Mark Complete
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={urgentFindings ? 'contained' : 'outlined'}
+                    color="error"
+                    onClick={() => setUrgentFindings(!urgentFindings)}
+                    fullWidth
+                    startIcon={<WarningIcon />}
+                  >
+                    {urgentFindings ? 'Clear Urgent' : 'Mark Urgent'}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Security & Privacy */}
+            <Card sx={{ mb: 2, bgcolor: alpha(theme.palette.error.main, 0.05) }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <LockIcon color="error" sx={{ mr: 1 }} />
+                  <Typography variant="subtitle2" color="error">
+                    Security Level: {securityLevel.toUpperCase()}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  {securityLevel === 'high' 
+                    ? 'High security mode active. All actions are logged.'
+                    : 'Standard security mode. Click to enable high security.'
+                  }
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  onClick={handleSecurityToggle}
+                  fullWidth
+                >
+                  {securityLevel === 'high' ? 'Disable High Security' : 'Enable High Security'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
+                  Quick Actions
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button size="small" startIcon={<ReportIcon />} onClick={handleCreateReport}>
+                    Create Report
+                  </Button>
+                  <Button size="small" startIcon={<BillingIcon />} onClick={handleViewBilling}>
+                    View Billing
+                  </Button>
+                  <Button size="small" startIcon={<ShareIcon />} onClick={handleShare}>
+                    Share Study
+                  </Button>
+                  <Button size="small" startIcon={<DownloadIcon />} onClick={handleDownload}>
+                    Download
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        </Drawer>
         {/* DICOM Viewer with Tabs - Full Screen on Mobile, Left Side on Desktop */}
         <Box
           sx={{
@@ -703,7 +1062,7 @@ const StudyViewer: React.FC = () => {
                 >
                   <Tab 
                     icon={<TwoDIcon />} 
-                    label="2D Viewer" 
+                    label="Multi-Frame" 
                     sx={{ minHeight: 48, fontSize: '0.875rem' }}
                   />
                   <Tab 
@@ -727,78 +1086,70 @@ const StudyViewer: React.FC = () => {
               {/* Viewer Content */}
               <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 {viewerTab === 0 ? (
-                  <SimpleDicomViewer
+                <MultiFrameDicomViewer
+                  study={study}
+                  onError={(error) => {
+                    console.error("MultiFrame DICOM Viewer Error:", error)
+                    setError(`MultiFrame DICOM Viewer Error: ${error}`)
+                  }}
+                />
+              ) : viewerTab === 1 ? (
+                <Box sx={{ height: '100%', position: 'relative' }}>
+                  <ThreeDViewer
                     study={study}
-                    onError={(error) => {
-                      console.error("Simple DICOM Viewer Error:", error)
-                      setError(`Simple DICOM Viewer Error: ${error}`)
-                    }}
+                    imageIds={getDicomImageIds(study)}
+                    settings={threeDSettings}
+                    onSettingsChange={setThreeDSettings}
                   />
-                ) : viewerTab === 1 ? (
-                  <MultiFrameDicomViewer
-                    study={study}
-                    onError={(error) => {
-                      console.error("MultiFrame DICOM Viewer Error:", error)
-                      setError(`MultiFrame DICOM Viewer Error: ${error}`)
-                    }}
-                  />
-                ) : viewerTab === 2 ? (
-                  <Box sx={{ height: '100%', position: 'relative' }}>
-                    <ThreeDViewer
-                      study={study}
-                      imageIds={getDicomImageIds(study)}
-                      settings={threeDSettings}
-                      onSettingsChange={setThreeDSettings}
-                    />
-                    {/* Debug info for development */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          bgcolor: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          p: 1,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          maxWidth: 300,
-                          zIndex: 1000
-                        }}
-                      >
-                        <Typography variant="caption" display="block">
-                          Study: {study.study_uid}
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Patient: {study.patient_id}
-                        </Typography>
-                        <Typography variant="caption" display="block">
-                          Available URLs: {getDicomImageIds(study).length}
-                        </Typography>
-                        <Typography variant="caption" display="block" sx={{ fontSize: '0.6rem', opacity: 0.8 }}>
-                          URLs: {getDicomImageIds(study).slice(0, 2).map(url => url.split('/').pop()).join(', ')}
-                          {getDicomImageIds(study).length > 2 && '...'}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                ) : viewerTab === 2 ? (
-                  <ComprehensiveDicomViewer
-                    study={study}
-                    onError={(error) => {
-                      console.error("Comprehensive DICOM Viewer Error:", error)
-                      setError(`Comprehensive DICOM Viewer Error: ${error}`)
-                    }}
-                  />
-                ) : (
-                  <OptimizedDicomViewer
-                    study={study}
-                    onError={(error) => {
-                      console.error("Optimized DICOM Viewer Error:", error)
-                      setError(`Optimized DICOM Viewer Error: ${error}`)
-                    }}
-                  />
-                )}
+                  {/* Debug info for development */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        bgcolor: 'rgba(0,0,0,0.7)',
+                        color: 'white',
+                        p: 1,
+                        borderRadius: 1,
+                        fontSize: '0.75rem',
+                        maxWidth: 300,
+                        zIndex: 1000
+                      }}
+                    >
+                      <Typography variant="caption" display="block">
+                        Study: {study.study_uid}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        Patient: {study.patient_id}
+                      </Typography>
+                      <Typography variant="caption" display="block">
+                        Available URLs: {getDicomImageIds(study).length}
+                      </Typography>
+                      <Typography variant="caption" display="block" sx={{ fontSize: '0.6rem', opacity: 0.8 }}>
+                        URLs: {getDicomImageIds(study).slice(0, 2).map(url => url.split('/').pop()).join(', ')}
+                        {getDicomImageIds(study).length > 2 && '...'}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              ) : viewerTab === 2 ? (
+                <ComprehensiveDicomViewer
+                  study={study}
+                  onError={(error) => {
+                    console.error("Comprehensive DICOM Viewer Error:", error)
+                    setError(`Comprehensive DICOM Viewer Error: ${error}`)
+                  }}
+                />
+              ) : viewerTab === 3 ? (
+                <OptimizedDicomViewer
+                  study={study}
+                  onError={(error) => {
+                    console.error("Optimized DICOM Viewer Error:", error)
+                    setError(`Optimized DICOM Viewer Error: ${error}`)
+                  }}
+                />
+              ) : null}
               </Box>
             </>
           ) : (
@@ -835,7 +1186,7 @@ const StudyViewer: React.FC = () => {
           }}
         >
           <Box sx={{ 
-            p: { xs: 2, sm: 3 }, 
+            p: { xs: 2, sm: isTablet ? 2 : 3 }, 
             height: "100%",
             display: "flex",
             flexDirection: "column"
@@ -1143,6 +1494,35 @@ const StudyViewer: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Floating Action Button for Quick Actions */}
+      {!sidebarOpen && (
+        <Fab
+          color="primary"
+          aria-label="quick actions"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
+          }}
+          onClick={handleMenuToggle}
+        >
+          <MenuIcon />
+        </Fab>
+      )}
+
+      {/* Create Report Dialog */}
+      <CreateReportDialog
+        open={showCreateReportDialog}
+        onClose={handleCloseCreateReportDialog}
+        study={study}
+        onReportCreated={(reportId) => {
+          console.log('Report created:', reportId)
+          setShowCreateReportDialog(false)
+          // Refresh study data or navigate to report
+        }}
+      />
     </Box>
   )
 }

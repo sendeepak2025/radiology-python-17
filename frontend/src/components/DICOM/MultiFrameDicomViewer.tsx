@@ -7,7 +7,8 @@ import {
 import {
     ZoomIn, ZoomOut, RotateLeft, RotateRight, 
     RestartAlt, Fullscreen, PlayArrow, 
-    Pause, SkipNext, SkipPrevious, Speed
+    Pause, SkipNext, SkipPrevious, Speed,
+    FirstPage, LastPage
 } from '@mui/icons-material';
 import type { Study } from '../../types';
 import { dicomService } from '../../services/dicomService';
@@ -1018,60 +1019,128 @@ const MultiFrameDicomViewer: React.FC<MultiFrameDicomViewerProps> = ({ study, on
     
     return (
         <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: '#000' }}>
-            {/* Header */}
-            <Paper sx={{ p: 1, bgcolor: '#1a1a1a', color: '#00ff00' }}>
+            {/* Professional Header */}
+            <Paper sx={{ p: 2, bgcolor: '#0a0a0a', color: '#ffffff', borderBottom: '2px solid #1976d2' }}>
                 <Grid container alignItems="center" spacing={2}>
-                    <Grid item xs={12} md={8}>
-                        <Typography variant="h6">
-                            🏥 Multi-Slice DICOM Viewer
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                            🏥 Professional DICOM Workstation
                         </Typography>
-                        <Stack direction="row" spacing={1}>
-                            <Chip label={study.patient_id} size="small" />
-                            <Chip label={study.original_filename || study.study_uid} size="small" variant="outlined" />
-                            <Chip label={`${totalSlices} slices`} size="small" color="success" />
+                        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                            <Chip 
+                                label={`Patient: ${study.patient_id}`} 
+                                size="small" 
+                                sx={{ bgcolor: '#1976d2', color: 'white' }}
+                            />
+                            <Chip 
+                                label={study.original_filename || study.study_uid} 
+                                size="small" 
+                                variant="outlined"
+                                sx={{ borderColor: '#1976d2', color: '#1976d2' }}
+                            />
+                            <Chip 
+                                label={`${totalSlices} Images`} 
+                                size="small" 
+                                sx={{ bgcolor: '#4caf50', color: 'white' }}
+                            />
                             {totalSlices > 1 && (
-                                <Chip label="Multi-slice Series" size="small" color="warning" />
-                            )}
-                            {loadedImages.length > 0 && (
-                                <Chip label="Enhanced Navigation" size="small" color="info" />
+                                <Chip 
+                                    label="Multi-Frame Series" 
+                                    size="small" 
+                                    sx={{ bgcolor: '#ff9800', color: 'white' }}
+                                />
                             )}
                         </Stack>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h4" sx={{ color: '#1976d2', fontWeight: 700 }}>
+                                Image {currentSlice + 1}/{totalSlices}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#888' }}>
+                                {study.study_date} • {study.modality} • 512×512
+                            </Typography>
+                        </Box>
                     </Grid>
                 </Grid>
             </Paper>
             
-            {/* Controls */}
-            <Paper sx={{ p: 1, bgcolor: '#1a1a1a' }}>
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                    {/* Zoom Controls */}
-                    <Tooltip title="Zoom In">
-                        <IconButton onClick={handleZoomIn} size="small" sx={{ color: '#00ff00' }}>
-                            <ZoomIn />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Zoom Out">
-                        <IconButton onClick={handleZoomOut} size="small" sx={{ color: '#00ff00' }}>
-                            <ZoomOut />
-                        </IconButton>
-                    </Tooltip>
-                    
-                    {/* Rotation Controls */}
-                    <Tooltip title="Rotate Left">
-                        <IconButton onClick={handleRotateLeft} size="small" sx={{ color: '#00ff00' }}>
-                            <RotateLeft />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Rotate Right">
-                        <IconButton onClick={handleRotateRight} size="small" sx={{ color: '#00ff00' }}>
-                            <RotateRight />
-                        </IconButton>
-                    </Tooltip>
-                    
-                    <Tooltip title="Reset">
-                        <IconButton onClick={handleReset} size="small" sx={{ color: '#00ff00' }}>
-                            <RestartAlt />
-                        </IconButton>
-                    </Tooltip>
+            {/* Professional Controls */}
+            <Paper sx={{ p: 2, bgcolor: '#0f0f0f', borderTop: '1px solid #333' }}>
+                <Grid container spacing={2} alignItems="center">
+                    {/* Image Manipulation Tools */}
+                    <Grid item xs={12} md={4}>
+                        <Typography variant="subtitle2" sx={{ color: '#1976d2', mb: 1, fontWeight: 600 }}>
+                            IMAGE TOOLS
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                            <Tooltip title="Zoom In (Mouse Wheel + Ctrl)">
+                                <IconButton 
+                                    onClick={handleZoomIn} 
+                                    size="medium" 
+                                    sx={{ 
+                                        color: '#1976d2', 
+                                        bgcolor: 'rgba(25, 118, 210, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.2)' }
+                                    }}
+                                >
+                                    <ZoomIn />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Zoom Out (Mouse Wheel + Ctrl)">
+                                <IconButton 
+                                    onClick={handleZoomOut} 
+                                    size="medium" 
+                                    sx={{ 
+                                        color: '#1976d2', 
+                                        bgcolor: 'rgba(25, 118, 210, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.2)' }
+                                    }}
+                                >
+                                    <ZoomOut />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Rotate Left (R)">
+                                <IconButton 
+                                    onClick={handleRotateLeft} 
+                                    size="medium" 
+                                    sx={{ 
+                                        color: '#1976d2', 
+                                        bgcolor: 'rgba(25, 118, 210, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.2)' }
+                                    }}
+                                >
+                                    <RotateLeft />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Rotate Right (Shift+R)">
+                                <IconButton 
+                                    onClick={handleRotateRight} 
+                                    size="medium" 
+                                    sx={{ 
+                                        color: '#1976d2', 
+                                        bgcolor: 'rgba(25, 118, 210, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.2)' }
+                                    }}
+                                >
+                                    <RotateRight />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reset View (Esc)">
+                                <IconButton 
+                                    onClick={handleReset} 
+                                    size="medium" 
+                                    sx={{ 
+                                        color: '#ff9800', 
+                                        bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                        '&:hover': { bgcolor: 'rgba(255, 152, 0, 0.2)' }
+                                    }}
+                                >
+                                    <RestartAlt />
+                                </IconButton>
+                            </Tooltip>
+                        </Stack>
+                    </Grid>
                     
                     {/* Window/Level Controls */}
                     <Tooltip title="Auto Window/Level">
@@ -1207,97 +1276,138 @@ const MultiFrameDicomViewer: React.FC<MultiFrameDicomViewerProps> = ({ study, on
                         </IconButton>
                     </Tooltip>
                     
-                    {/* Slice Navigation (Updated) */}
-                    {totalSlices > 1 && (
-                        <>
-                            <Tooltip title="Previous Slice">
-                                <span>
+                    {/* Frame Navigation */}
+                    <Grid item xs={12} md={4}>
+                        <Typography variant="subtitle2" sx={{ color: '#4caf50', mb: 1, fontWeight: 600 }}>
+                            FRAME NAVIGATION
+                        </Typography>
+                        {totalSlices > 1 ? (
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Tooltip title="First Frame (Home)">
+                                    <IconButton 
+                                        onClick={() => setCurrentSlice(0)} 
+                                        disabled={currentSlice === 0}
+                                        size="medium" 
+                                        sx={{ 
+                                            color: '#4caf50', 
+                                            bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.2)' }
+                                        }}
+                                    >
+                                        <FirstPage />
+                                    </IconButton>
+                                </Tooltip>
+                                
+                                <Tooltip title="Previous Frame (←)">
                                     <IconButton 
                                         onClick={() => setCurrentSlice(prev => Math.max(0, prev - 1))} 
                                         disabled={currentSlice === 0}
-                                        size="small" 
-                                        sx={{ color: '#00ff00' }}
+                                        size="medium" 
+                                        sx={{ 
+                                            color: '#4caf50', 
+                                            bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.2)' }
+                                        }}
                                     >
                                         <SkipPrevious />
                                     </IconButton>
-                                </span>
-                            </Tooltip>
-                            
-                            <Tooltip title={isPlaying ? "Pause" : "Play"}>
-                                <IconButton 
-                                    onClick={() => {
-                                        setIsPlaying(!isPlaying);
-                                        setAutoScroll(!isPlaying);
-                                    }} 
-                                    size="small" 
-                                    sx={{ color: '#00ff00' }}
-                                >
-                                    {isPlaying ? <Pause /> : <PlayArrow />}
-                                </IconButton>
-                            </Tooltip>
-                            
-                            <Tooltip title="Next Slice">
-                                <span>
+                                </Tooltip>
+                                
+                                <Tooltip title={isPlaying ? "Pause (Space)" : "Play (Space)"}>
+                                    <IconButton 
+                                        onClick={() => setIsPlaying(!isPlaying)} 
+                                        size="medium" 
+                                        sx={{ 
+                                            color: isPlaying ? '#f44336' : '#4caf50', 
+                                            bgcolor: isPlaying ? 'rgba(244, 67, 54, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                                            '&:hover': { 
+                                                bgcolor: isPlaying ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)' 
+                                            }
+                                        }}
+                                    >
+                                        {isPlaying ? <Pause /> : <PlayArrow />}
+                                    </IconButton>
+                                </Tooltip>
+                                
+                                <Tooltip title="Next Frame (→)">
                                     <IconButton 
                                         onClick={() => setCurrentSlice(prev => Math.min(totalSlices - 1, prev + 1))} 
                                         disabled={currentSlice === totalSlices - 1}
-                                        size="small" 
-                                        sx={{ color: '#00ff00' }}
+                                        size="medium" 
+                                        sx={{ 
+                                            color: '#4caf50', 
+                                            bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.2)' }
+                                        }}
                                     >
                                         <SkipNext />
                                     </IconButton>
-                                </span>
-                            </Tooltip>
-                            
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '120px' }}>
-                                <Typography variant="caption" sx={{ color: '#00ff00', fontSize: '0.75rem', mb: 0.5 }}>
-                                    Slice {currentSlice + 1}/{totalSlices}
-                                </Typography>
+                                </Tooltip>
+                                
+                                <Tooltip title="Last Frame (End)">
+                                    <IconButton 
+                                        onClick={() => setCurrentSlice(totalSlices - 1)} 
+                                        disabled={currentSlice === totalSlices - 1}
+                                        size="medium" 
+                                        sx={{ 
+                                            color: '#4caf50', 
+                                            bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.2)' }
+                                        }}
+                                    >
+                                        <LastPage />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
+                        ) : (
+                            <Typography variant="body2" sx={{ color: '#888' }}>
+                                Single Frame
+                            </Typography>
+                        )}
+                    </Grid>
+                    
+                    {/* Frame Slider */}
+                    {totalSlices > 1 && (
+                        <Grid item xs={12} md={4}>
+                            <Typography variant="subtitle2" sx={{ color: '#9c27b0', mb: 1, fontWeight: 600 }}>
+                                FRAME SELECTOR
+                            </Typography>
+                            <Box sx={{ px: 2 }}>
                                 <Slider
                                     value={currentSlice}
                                     min={0}
                                     max={totalSlices - 1}
                                     step={1}
                                     onChange={(_, value) => setCurrentSlice(value as number)}
+                                    valueLabelDisplay="auto"
+                                    valueLabelFormat={(value) => `Frame ${value + 1}`}
                                     sx={{
-                                        width: '100px',
-                                        height: 4,
-                                        color: '#00ff00',
+                                        color: '#9c27b0',
                                         '& .MuiSlider-thumb': {
-                                            width: 12,
-                                            height: 12,
-                                            backgroundColor: '#00ff00',
+                                            backgroundColor: '#9c27b0',
+                                            width: 20,
+                                            height: 20,
                                         },
                                         '& .MuiSlider-track': {
-                                            backgroundColor: '#00ff00',
+                                            backgroundColor: '#9c27b0',
+                                            height: 6,
                                         },
                                         '& .MuiSlider-rail': {
-                                            backgroundColor: 'rgba(0, 255, 0, 0.3)',
+                                            backgroundColor: 'rgba(156, 39, 176, 0.3)',
+                                            height: 6,
+                                        },
+                                        '& .MuiSlider-valueLabel': {
+                                            backgroundColor: '#9c27b0',
                                         }
                                     }}
                                 />
+                                <Typography variant="caption" sx={{ color: '#9c27b0', textAlign: 'center', display: 'block' }}>
+                                    Frame {currentSlice + 1} of {totalSlices}
+                                </Typography>
                             </Box>
-                            
-                            {/* Play Speed */}
-                            <Tooltip title="Play Speed">
-                                <IconButton size="small" sx={{ color: '#00ff00' }}>
-                                    <Speed />
-                                </IconButton>
-                            </Tooltip>
-                            <Slider
-                                value={playSpeed}
-                                min={1}
-                                max={10}
-                                onChange={(_, value) => setPlaySpeed(value as number)}
-                                sx={{ width: 80, color: '#00ff00' }}
-                                size="small"
-                            />
-                            <Typography variant="caption" sx={{ color: '#00ff00', ml: 1 }}>
-                                {playSpeed} fps
-                            </Typography>
-                        </>
+                        </Grid>
                     )}
-                </Stack>
+                </Grid>
             </Paper>
             
             {/* Canvas */}

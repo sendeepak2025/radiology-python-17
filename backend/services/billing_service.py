@@ -8,7 +8,12 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 import uuid
 
-from models import Report, Superbill, BillingCode
+# Fix the imports to use relative imports
+try:
+    from ..models import Report, Superbill, BillingCode
+except ImportError:
+    from backend.models import Report, Superbill, BillingCode
+
 # Import directly from schemas.py file
 import importlib.util
 import os
@@ -21,8 +26,13 @@ SuperbillResponse = schemas_module.SuperbillResponse
 ServiceLine = schemas_module.ServiceLine
 DiagnosisCode = schemas_module.DiagnosisCode
 PatientInfo = schemas_module.PatientInfo
-from services.audit_service import AuditService
-from config import settings
+
+try:
+    from .audit_service import AuditService
+    from ..config import settings
+except ImportError:
+    from backend.services.audit_service import AuditService
+    from backend.config import settings
 
 logger = logging.getLogger(__name__)
 

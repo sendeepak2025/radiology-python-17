@@ -108,8 +108,8 @@ const OptimizedDicomViewer: React.FC<OptimizedDicomViewerProps> = ({
 
   // Memoized processing options
   const processingOptions = useMemo(() => ({
-    enhancement: state.enhancement || undefined,
-    filter: state.filter || undefined,
+    enhancement: state.enhancement,
+    filter: state.filter,
     outputFormat: state.outputFormat,
     useCache: enableCaching
   }), [state.enhancement, state.filter, state.outputFormat, enableCaching]);

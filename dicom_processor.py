@@ -229,14 +229,12 @@ class DicomProcessor:
                           filter_type: Optional[str] = None,
                           output_format: str = "PNG",
                           target_size: Optional[Tuple[int, int]] = None,
-                          frame: Optional[int] = None,
                           use_cache: bool = True) -> Dict[str, Any]:
         """Process DICOM file with various enhancements and conversions"""
         
         # Generate cache key for processed version
         cache_key_parts = [enhancement or "none", filter_type or "none", 
-                          output_format, str(target_size or "original"), 
-                          f"frame_{frame}" if frame is not None else "all_frames"]
+                          output_format, str(target_size or "original")]
         cache_operation = f"processed_{'_'.join(cache_key_parts)}"
         
         if use_cache:
@@ -267,31 +265,6 @@ class DicomProcessor:
             if pixel_array is None:
                 result['error'] = "Failed to extract pixel data"
                 return result
-            
-            # Handle multi-frame DICOM - extract specific frame if requested
-            if len(pixel_array.shape) == 3 and pixel_array.shape[0] > 1:
-                # Multi-frame DICOM detected
-                total_frames = pixel_array.shape[0]
-                result['metadata']['NumberOfFrames'] = total_frames
-                
-                if frame is not None:
-                    # Extract specific frame
-                    if 0 <= frame < total_frames:
-                        pixel_array = pixel_array[frame]
-                        result['metadata']['extracted_frame'] = frame
-                        print(f"🎯 Extracted frame {frame} from {total_frames} total frames")
-                    else:
-                        result['error'] = f"Frame {frame} out of range (0-{total_frames-1})"
-                        return result
-                else:
-                    # No specific frame requested - use first frame
-                    pixel_array = pixel_array[0]
-                    result['metadata']['extracted_frame'] = 0
-                    print(f"🎯 Using first frame from {total_frames} total frames")
-            else:
-                # Single frame DICOM
-                result['metadata']['NumberOfFrames'] = 1
-                result['metadata']['extracted_frame'] = 0
             
             # Get windowing parameters from DICOM
             window_center = getattr(dicom_data, 'WindowCenter', None)

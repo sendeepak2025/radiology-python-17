@@ -310,7 +310,6 @@ def process_dicom_file(
     output_format: str = Query("PNG", description="Output format: PNG, JPEG, TIFF, BMP"),
     width: Optional[int] = Query(None, description="Target width for resizing"),
     height: Optional[int] = Query(None, description="Target height for resizing"),
-    frame: Optional[int] = Query(None, description="Specific frame number for multi-frame DICOMs"),
     use_cache: bool = Query(True, description="Use caching for faster processing")
 ):
     """Process DICOM file with various enhancements and conversions"""
@@ -324,22 +323,13 @@ def process_dicom_file(
         if width and height:
             target_size = (width, height)
         
-        # Handle frame parameter for multi-frame DICOMs
-        processing_kwargs = {
-            'enhancement': enhancement,
-            'filter_type': filter_type,
-            'output_format': output_format,
-            'target_size': target_size,
-            'use_cache': use_cache
-        }
-        
-        # Add frame parameter if specified
-        if frame is not None:
-            processing_kwargs['frame'] = frame
-        
         result = dicom_processor.process_dicom_file(
             str(file_path),
-            **processing_kwargs
+            enhancement=enhancement,
+            filter_type=filter_type,
+            output_format=output_format,
+            target_size=target_size,
+            use_cache=use_cache
         )
         
         if not result['success']:

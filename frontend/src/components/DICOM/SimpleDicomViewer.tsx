@@ -37,7 +37,6 @@ const SimpleDicomViewer: React.FC<SimpleDicomViewerProps> = ({ study, onError })
     
     // Image data storage
     const [imageData, setImageData] = useState<ImageData | null>(null);
-    const [originalPixelData, setOriginalPixelData] = useState<Uint8Array | null>(null);
     const [imageWidth, setImageWidth] = useState(512);
     const [imageHeight, setImageHeight] = useState(512);
     
@@ -183,8 +182,10 @@ const SimpleDicomViewer: React.FC<SimpleDicomViewerProps> = ({ study, onError })
                 
                 img.onerror = (error) => {
                     console.error('❌ Failed to load processed image:', error);
-                    setError('Failed to load processed image');
+                    const errorMsg = 'Failed to load processed image';
+                    setError(errorMsg);
                     setLoading(false);
+                    if (onError) onError(errorMsg);
                 };
                 
                 img.src = `data:image/png;base64,${result.image_data}`;
@@ -195,9 +196,11 @@ const SimpleDicomViewer: React.FC<SimpleDicomViewerProps> = ({ study, onError })
             
         } catch (error) {
             console.error('❌ Error loading DICOM:', error);
-            setError(`Failed to load DICOM: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMsg = `Failed to load DICOM: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            setError(errorMsg);
             setLoading(false);
             clearTimeout(loadingTimeout);
+            if (onError) onError(errorMsg);
         }
     }, [study, buildImageUrl]);
     
